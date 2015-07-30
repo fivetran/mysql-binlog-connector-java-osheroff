@@ -24,6 +24,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.BitSet;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -253,15 +254,26 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
         */
         long datetime = bigEndianLong(inputStream.read(5), 0, 5);
         int yearMonth = extractBits(datetime, 1, 17, 40);
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.YEAR, yearMonth / 13);
-        c.set(Calendar.MONTH, yearMonth % 13 - 1);
-        c.set(Calendar.DAY_OF_MONTH, extractBits(datetime, 18, 5, 40));
-        c.set(Calendar.HOUR_OF_DAY, extractBits(datetime, 23, 5, 40));
-        c.set(Calendar.MINUTE, extractBits(datetime, 28, 6, 40));
-        c.set(Calendar.SECOND, extractBits(datetime, 34, 6, 40));
-        c.set(Calendar.MILLISECOND, getFractionalSeconds(meta, inputStream));
-        return c.getTime();
+        int year = yearMonth / 13;
+        int month = yearMonth % 13 - 1;
+        int day = extractBits(datetime, 18, 5, 40);
+        int hour = extractBits(datetime, 23, 5, 40);
+        int minute = extractBits(datetime, 28, 6, 40);
+        int second = extractBits(datetime, 34, 6, 40);
+        int millisecond = getFractionalSeconds(meta, inputStream);
+        if (year == 0 && month == -1 && day == 0 && hour == 0 && minute == 0 && second == 0 && millisecond == 0)
+            return null;
+        else {
+            Calendar c = Calendar.getInstance();
+            c.set(Calendar.YEAR, year);
+            c.set(Calendar.MONTH, month);
+            c.set(Calendar.DAY_OF_MONTH, day);
+            c.set(Calendar.HOUR_OF_DAY, hour);
+            c.set(Calendar.MINUTE, minute);
+            c.set(Calendar.SECOND, second);
+            c.set(Calendar.MILLISECOND, millisecond);
+            return c.getTime();
+        }
     }
 
     private int getFractionalSeconds(int meta, ByteArrayInputStream inputStream) throws IOException {
