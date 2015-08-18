@@ -157,6 +157,10 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
                 return inputStream.readInteger(length);
             case SET:
                 return inputStream.readLong(length);
+            case GEOMETRY:
+                int dataLength = inputStream.readInteger(4);
+                System.out.println("GEOMETRY dataLength = " + dataLength);
+                return inputStream.read(dataLength);
             default:
                 throw new IOException("Unsupported type " + type);
         }
