@@ -96,7 +96,7 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
 
     protected static final long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(3);
 
-    private final Logger logger = Logger.getLogger(getClass().getSimpleName());
+    private final Logger logger = Logger.getLogger("donkey");
 
     {
         logger.setLevel(Level.FINEST);
