@@ -59,17 +59,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -86,7 +77,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private static final SocketFactory DEFAULT_SOCKET_FACTORY = new DefaultSocketFactory();
     private static final SSLSocketFactory DEFAULT_SSL_SOCKET_FACTORY = new DefaultSSLSocketFactory();
 
-    private final Logger logger = Logger.getLogger(getClass().getName());
+    private final Logger logger = Logger.getLogger("donkey");
 
     private final String hostname;
     private final int port;
