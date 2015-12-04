@@ -120,7 +120,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     // https://dev.mysql.com/doc/internals/en/sending-more-than-16mbyte.html
     private static final int MAX_PACKET_LENGTH = 16777215;
 
-    private final Logger logger = Logger.getLogger(getClass().getName());
+    private final Logger logger = Logger.getLogger("donkey");
 
     private final String hostname;
     private final int port;
