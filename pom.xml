@@ -33,13 +33,6 @@
             <name>Ben Osheroff</name>
         </developer>
     </developers>
-    <distributionManagement>
-        <repository>
-            <id>maven-central</id>
-            <name>Sonatype Nexus Staging</name>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-        </repository>
-    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -158,32 +151,12 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>com.github.shyiko.usage-maven-plugin</groupId>
-                <artifactId>usage-maven-plugin</artifactId>
-                <version>1.0.0</version>
-                <configuration>
-                    <usage>
-                        # build everything (append "-DskipTests=true" if you wish to skip tests)
-                        ./mvnw clean package
-
-                        # run unit + integration tests
-                        ./mvnw -P coverage clean verify
-                        # use -Dvagrant.integration.box= to switch between MySQL sandboxes
-
-                        # publish a new version
-                        ./mvnw versions:set -DnewVersion=&lt;version&gt;
-                        ./mvnw -Ddeploy=maven-central
-                        git tag &lt;version&gt; &amp;&amp; git push origin &lt;version&gt;
-                    </usage>
-                </configuration>
-            </plugin>
         </plugins>
         <extensions>
             <extension>
-                <groupId>com.github.shyiko.usage-maven-plugin</groupId>
-                <artifactId>usage-maven-plugin</artifactId>
-                <version>1.0.0</version>
+                <groupId>org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE</version>
             </extension>
         </extensions>
     </build>
@@ -271,5 +244,21 @@
             </build>
         </profile>
     </profiles>
+
+    <!-- You need ~/.m2/settings.xml for aws-maven to work -->
+    <distributionManagement>
+        <repository>
+            <id>fivetran-maven-release</id>
+            <url>s3://fivetran-maven/public/release</url>
+        </repository>
+    </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>aws-public-release</id>
+            <name>AWS Public Release Repository</name>
+            <url>https://s3.amazonaws.com/fivetran-maven/public/release</url>
+        </repository>
+    </repositories>
 
 </project>
