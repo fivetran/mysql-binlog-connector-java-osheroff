@@ -758,7 +758,6 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
-
     private void spawnKeepAliveThread() {
         final ExecutorService threadExecutor =
             Executors.newSingleThreadExecutor(new ThreadFactory() {
