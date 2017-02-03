@@ -37,6 +37,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
 import java.sql.Statement;
@@ -527,6 +528,19 @@ public class JsonBinaryValueIntegrationTest {
 
         assertEquals(writeAndCaptureJSON("CAST(x'cafe' AS JSON)"), "\"yv4=\"");
         assertEquals(writeAndCaptureJSON("CAST(x'cafebabe' AS JSON)"), "\"yv66vg==\"");
+    }
+
+    @Test
+    public void testJsonNull() throws Exception {
+        master.execute(new BinaryLogClientIntegrationTest.Callback<Statement>() {
+            @Override
+            public void execute(Statement statement) throws SQLException {
+                ResultSet results = statement.executeQuery("SELECT version()");
+                results.next();
+                System.out.println("MySQL version = " + results.getString(1));
+            }
+        });
+        assertJSONMatchOriginal("null");
     }
 
     private void assertJSONMatchOriginal(String value) throws Exception {
