@@ -111,7 +111,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private SocketFactory socketFactory;
     private SSLSocketFactory sslSocketFactory;
 
-    private volatile PacketChannel channel;
+    protected volatile PacketChannel channel;
     private volatile boolean connected;
     private volatile long masterServerId = -1;
 
@@ -856,7 +856,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         binlogPosition = Long.parseLong(resultSetRow.getValue(1));
     }
 
-    private ChecksumType fetchBinlogChecksum() throws IOException {
+    protected ChecksumType fetchBinlogChecksum() throws IOException {
         channel.write(new QueryCommand("show global variables like 'binlog_checksum'"));
         ResultSetRowPacket[] resultSet = readResultSet();
         if (resultSet.length == 0) {
@@ -1009,8 +1009,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
-    private ResultSetRowPacket[] readResultSet() throws IOException {
-        List<ResultSetRowPacket> resultSet = new LinkedList<>();
+    protected ResultSetRowPacket[] readResultSet() throws IOException {
+        List<ResultSetRowPacket> resultSet = new LinkedList<ResultSetRowPacket>();
         byte[] statementResult = channel.read();
         checkError(statementResult);
 
