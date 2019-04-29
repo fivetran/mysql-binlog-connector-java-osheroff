@@ -953,15 +953,15 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             binlogFilename = rotateEventData.getBinlogFilename();
             binlogPosition = rotateEventData.getBinlogPosition();
         } else
-        // do not update binlogPosition on TABLE_MAP so that in case of reconnect (using a different instance of
-        // client) table mapping cache could be reconstructed before hitting row mutation event
-        if (eventType != EventType.TABLE_MAP && eventHeader instanceof EventHeaderV4) {
-            EventHeaderV4 trackableEventHeader = (EventHeaderV4) eventHeader;
-            long nextBinlogPosition = trackableEventHeader.getNextPosition();
-            if (nextBinlogPosition > 0) {
-                binlogPosition = nextBinlogPosition;
+            // do not update binlogPosition on TABLE_MAP so that in case of reconnect (using a different instance of
+            // client) table mapping cache could be reconstructed before hitting row mutation event
+            if (eventType != EventType.TABLE_MAP && eventHeader instanceof EventHeaderV4) {
+                EventHeaderV4 trackableEventHeader = (EventHeaderV4) eventHeader;
+                long nextBinlogPosition = trackableEventHeader.getNextPosition();
+                if (nextBinlogPosition > 0) {
+                    binlogPosition = nextBinlogPosition;
+                }
             }
-        }
     }
 
     private void updateGtidSet(Event event) {
@@ -971,7 +971,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             }
         }
         EventHeader eventHeader = event.getHeader();
-        switch(eventHeader.getEventType()) {
+        switch (eventHeader.getEventType()) {
             case GTID:
                 GtidEventData gtidEventData = (GtidEventData) EventDataWrapper.internal(event.getData());
                 gtid = gtidEventData.getGtid();
@@ -988,12 +988,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 }
                 if ("BEGIN".equals(sql)) {
                     tx = true;
-                } else
-                if ("COMMIT".equals(sql) || "ROLLBACK".equals(sql)) {
+                } else if ("COMMIT".equals(sql) || "ROLLBACK".equals(sql)) {
                     commitGtid();
                     tx = false;
-                } else
-                if (!tx) {
+                } else if (!tx) {
                     // auto-commit query, likely DDL
                     commitGtid();
                 }
@@ -1041,7 +1039,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
      * Unregister all event listener of specific type.
      */
     public void unregisterEventListener(Class<? extends EventListener> listenerClass) {
-        for (EventListener eventListener: eventListeners) {
+        for (EventListener eventListener : eventListeners) {
             if (listenerClass.isInstance(eventListener)) {
                 eventListeners.remove(eventListener);
             }
@@ -1063,9 +1061,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             try {
                 eventListener.onEvent(event);
             } catch (Exception e) {
-                    throw new RuntimeException("Binlog event listener " + eventListener +
-                                               " choked on " + event, e);
-                }
+                throw new RuntimeException("Binlog event listener " + eventListener +
+                    " choked on " + event, e);
             }
         }
     }
