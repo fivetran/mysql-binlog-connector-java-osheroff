@@ -85,6 +85,7 @@ public class PacketChannel implements Channel {
         buffer.writeInteger(packetNumber++, 1);
 
         buffer.write(body, 0, body.length);
+        buffer.flush();
         outputStream.write(buffer.toByteArray());
         // though it has no effect in case of default (underlying) output stream (SocketOutputStream),
         // it may be necessary in case of non-default one
