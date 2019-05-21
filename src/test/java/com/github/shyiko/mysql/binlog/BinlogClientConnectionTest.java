@@ -11,19 +11,7 @@ import java.io.IOException;
 public class BinlogClientConnectionTest {
 
     public static void main(String[] args) throws IOException {
-        BinaryLogClient client =
-            new BinaryLogClient(
-                "fivetran-test-mysql.mysql.database.azure.com",
-                3306,
-                "developers@fivetran-test-mysql",
-                "MonkeyBusiness1");
-
-//        BinaryLogClient client =
-//                new BinaryLogClient(
-//                        "localhost",
-//                        3306,
-//                        "glarwood",
-//                        "April!5!5");
+        BinaryLogClient client = null; // TODO
 
         client.registerEventListener(new BinaryLogClient.EventListener() {
             @Override
