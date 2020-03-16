@@ -15,43 +15,18 @@
  */
 package com.github.shyiko.mysql.binlog;
 
-import com.github.shyiko.mysql.binlog.event.Event;
-import com.github.shyiko.mysql.binlog.event.EventHeader;
-import com.github.shyiko.mysql.binlog.event.EventHeaderV4;
-import com.github.shyiko.mysql.binlog.event.EventType;
-import com.github.shyiko.mysql.binlog.event.GtidEventData;
-import com.github.shyiko.mysql.binlog.event.QueryEventData;
-import com.github.shyiko.mysql.binlog.event.RotateEventData;
-import com.github.shyiko.mysql.binlog.event.deserialization.ChecksumType;
-import com.github.shyiko.mysql.binlog.event.deserialization.EventDataDeserializationException;
-import com.github.shyiko.mysql.binlog.event.deserialization.EventDataDeserializer;
-import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer;
+import com.github.shyiko.mysql.binlog.event.*;
+import com.github.shyiko.mysql.binlog.event.deserialization.*;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer.EventDataWrapper;
-import com.github.shyiko.mysql.binlog.event.deserialization.GtidEventDataDeserializer;
-import com.github.shyiko.mysql.binlog.event.deserialization.QueryEventDataDeserializer;
-import com.github.shyiko.mysql.binlog.event.deserialization.RotateEventDataDeserializer;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 import com.github.shyiko.mysql.binlog.jmx.BinaryLogClientMXBean;
-import com.github.shyiko.mysql.binlog.network.AuthenticationException;
-import com.github.shyiko.mysql.binlog.network.ClientCapabilities;
-import com.github.shyiko.mysql.binlog.network.DefaultSSLSocketFactory;
-import com.github.shyiko.mysql.binlog.network.SSLMode;
-import com.github.shyiko.mysql.binlog.network.SSLSocketFactory;
-import com.github.shyiko.mysql.binlog.network.ServerException;
-import com.github.shyiko.mysql.binlog.network.SocketFactory;
-import com.github.shyiko.mysql.binlog.network.protocol.ErrorPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.Packet;
-import com.github.shyiko.mysql.binlog.network.protocol.PacketChannel;
-import com.github.shyiko.mysql.binlog.network.protocol.ResultSetRowPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateNativePasswordCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.Command;
-import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogGtidCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.PingCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.QueryCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.SSLRequestCommand;
+import com.github.shyiko.mysql.binlog.network.*;
+import com.github.shyiko.mysql.binlog.network.protocol.*;
+import com.github.shyiko.mysql.binlog.network.protocol.command.*;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -60,23 +35,16 @@ import java.net.SocketException;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 
 /**
@@ -1117,7 +1085,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     private void notifyEventListeners(Event event) {
-        long startTimeOfEvents = new Date().getTime();
+        long startTimeOfEvents = System.currentTimeMillis();
         shout("Begin notifying event listeners");
         if (event.getData() instanceof EventDataWrapper) {
             event = new Event(event.getHeader(), ((EventDataWrapper) event.getData()).getExternal());
@@ -1125,17 +1093,17 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
         for (EventListener eventListener : eventListeners) {
             try {
-                long startTimeOfEvent = new Date().getTime();
+                long startTimeOfEvent = System.currentTimeMillis();
                 shout("Processing event " + eventListener);
                 eventListener.onEvent(event);
-                long totalTimeInMs = new Date().getTime() - startTimeOfEvent;
+                long totalTimeInMs = System.currentTimeMillis() - startTimeOfEvent;
                 shout(String.format("Done processing event" + eventListener + " in %d ms", totalTimeInMs));
             } catch (Exception e) {
                 throw new RuntimeException("Binlog event listener " + eventListener +
                     " choked on " + event, e);
             }
         }
-        long totalTimeInMs = new Date().getTime() - startTimeOfEvents;
+        long totalTimeInMs = System.currentTimeMillis() - startTimeOfEvents;
         shout(String.format("Completed notifying event listeners in %d ms", totalTimeInMs));
     }
 
