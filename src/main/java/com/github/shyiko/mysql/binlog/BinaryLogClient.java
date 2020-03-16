@@ -1121,18 +1121,26 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     private void notifyEventListeners(Event event) {
+        shout("Begin notifying event listeners");
         if (event.getData() instanceof EventDataWrapper) {
             event = new Event(event.getHeader(), ((EventDataWrapper) event.getData()).getExternal());
         }
 
         for (EventListener eventListener : eventListeners) {
             try {
+                shout("Processing event " + eventListener);
                 eventListener.onEvent(event);
+                shout("Done processing event" + eventListener);
             } catch (Exception e) {
                 throw new RuntimeException("Binlog event listener " + eventListener +
                     " choked on " + event, e);
             }
         }
+        shout("Completed notifying event listeners");
+    }
+
+    private static void shout(String text) {
+        System.out.println(String.format("***** %s *****", text));
     }
 
     /**
