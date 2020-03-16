@@ -57,14 +57,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.channels.Channel;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -1121,6 +1117,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     private void notifyEventListeners(Event event) {
+        long startTimeOfEvents = new Date().getTime();
         shout("Begin notifying event listeners");
         if (event.getData() instanceof EventDataWrapper) {
             event = new Event(event.getHeader(), ((EventDataWrapper) event.getData()).getExternal());
@@ -1128,15 +1125,18 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
         for (EventListener eventListener : eventListeners) {
             try {
+                long startTimeOfEvent = new Date().getTime();
                 shout("Processing event " + eventListener);
                 eventListener.onEvent(event);
-                shout("Done processing event" + eventListener);
+                long totalTimeInMs = new Date().getTime() - startTimeOfEvent;
+                shout(String.format("Done processing event" + eventListener + " in %d ms", totalTimeInMs));
             } catch (Exception e) {
                 throw new RuntimeException("Binlog event listener " + eventListener +
                     " choked on " + event, e);
             }
         }
-        shout("Completed notifying event listeners");
+        long totalTimeInMs = new Date().getTime() - startTimeOfEvents;
+        shout(String.format("Completed notifying event listeners in %d ms", totalTimeInMs));
     }
 
     private static void shout(String text) {
