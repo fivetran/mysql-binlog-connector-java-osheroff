@@ -902,6 +902,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         try {
+            long startTimeOfPeek = System.currentTimeMillis();
+            long endTimeOfPeek = 0;
+
+            shout("Started listening for event packets");
             while (inputStream.peek() != -1) {
                 int packetLength = inputStream.readInteger(3);
                 inputStream.skip(1); // 1 byte for sequence
@@ -936,6 +940,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                     continue;
                 }
                 if (isConnected()) {
+                    if (endTimeOfPeek == 0) {
+                        endTimeOfPeek = System.currentTimeMillis();
+                        shout("Peek to event completed in " + (endTimeOfPeek - startTimeOfPeek) + " ms");
+                    }
                     eventLastSeen = System.currentTimeMillis();
                     updateGtidSet(event);
                     notifyEventListeners(event);
