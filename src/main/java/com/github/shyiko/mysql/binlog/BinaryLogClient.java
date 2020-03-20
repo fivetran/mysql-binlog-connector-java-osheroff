@@ -1116,7 +1116,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     private static void shout(String text) {
-        System.out.println(String.format("***** %s *****", text));
+        System.out.println(String.format("** BINLOG ** %s ** BINLOG **", text));
     }
 
     /**
