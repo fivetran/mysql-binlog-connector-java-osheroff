@@ -23,6 +23,7 @@ import com.github.shyiko.mysql.binlog.jmx.BinaryLogClientMXBean;
 import com.github.shyiko.mysql.binlog.network.*;
 import com.github.shyiko.mysql.binlog.network.protocol.*;
 import com.github.shyiko.mysql.binlog.network.protocol.command.*;
+import com.github.shyiko.mysql.binlog.util.ConsoleColor;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -907,10 +908,18 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             long startTimeOfPeek = System.currentTimeMillis();
             long endTimeOfPeek = 0;
 
+            long startPacketReadsTime = System.currentTimeMillis();
+
             shout("Started listening for event packets");
             while (inputStream.peek() != -1) {
                 int packetLength = inputStream.readInteger(3);
                 totalPacketSize += packetLength;
+
+                if ((System.currentTimeMillis() - startPacketReadsTime) / 10000 > 0) {
+                    shout("Read " + totalPacketSize + " bytes so far");
+                    startPacketReadsTime = System.currentTimeMillis();
+                }
+
                 inputStream.skip(1); // 1 byte for sequence
                 int marker = inputStream.read();
                 if (marker == 0xFF) {
@@ -1098,7 +1107,6 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     private void notifyEventListeners(Event event) {
         long startTimeOfEvents = System.currentTimeMillis();
-        shout("Begin notifying event listeners");
         if (event.getData() instanceof EventDataWrapper) {
             event = new Event(event.getHeader(), ((EventDataWrapper) event.getData()).getExternal());
         }
@@ -1112,11 +1120,16 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             }
         }
         long totalTimeInMs = System.currentTimeMillis() - startTimeOfEvents;
-        shout(String.format("Completed notifying event listeners in %d ms", totalTimeInMs));
     }
 
     private static void shout(String text) {
-        System.out.println(String.format("** BINLOG ** %s ** BINLOG **", text));
+        shout(text, ConsoleColor.GREEN_BOLD);
+    }
+
+    private static void shout(String text, ConsoleColor color) {
+        String logType = color + "UPDATER: " + ConsoleColor.RESET;
+        String logMessage = String.format(logType + " %s ", text);
+        System.out.println(logMessage);
     }
 
     /**
