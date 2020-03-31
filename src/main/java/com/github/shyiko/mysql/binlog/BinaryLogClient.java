@@ -901,6 +901,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private void listenForEventPackets() throws IOException {
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
+        long totalPacketSize = 0;
+
         try {
             long startTimeOfPeek = System.currentTimeMillis();
             long endTimeOfPeek = 0;
@@ -908,6 +910,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             shout("Started listening for event packets");
             while (inputStream.peek() != -1) {
                 int packetLength = inputStream.readInteger(3);
+                totalPacketSize += packetLength;
                 inputStream.skip(1); // 1 byte for sequence
                 int marker = inputStream.read();
                 if (marker == 0xFF) {
@@ -957,6 +960,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 }
             }
         } finally {
+            shout("TOTAL PACKET SIZE: " + totalPacketSize);
             if (isConnected()) {
                 if (completeShutdown) {
                     disconnect(); // initiate complete shutdown sequence (which includes keep alive thread)
@@ -1101,11 +1105,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
         for (EventListener eventListener : eventListeners) {
             try {
-                long startTimeOfEvent = System.currentTimeMillis();
-                shout("Processing event " + eventListener);
                 eventListener.onEvent(event);
-                long totalTimeInMs = System.currentTimeMillis() - startTimeOfEvent;
-                shout(String.format("Done processing event" + eventListener + " in %d ms", totalTimeInMs));
             } catch (Exception e) {
                 throw new RuntimeException("Binlog event listener " + eventListener +
                     " choked on " + event, e);
