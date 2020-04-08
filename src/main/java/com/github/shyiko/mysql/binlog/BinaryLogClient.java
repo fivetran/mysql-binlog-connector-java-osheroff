@@ -54,6 +54,7 @@ import java.util.logging.Logger;
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
 public class BinaryLogClient implements BinaryLogClientMXBean {
+    static long packetListenTime = 0;
 
     private static final SSLSocketFactory DEFAULT_REQUIRED_SSL_MODE_SOCKET_FACTORY = new DefaultSSLSocketFactory() {
 
@@ -900,15 +901,15 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     private void listenForEventPackets() throws IOException {
+        long startPacketReadsTime = System.nanoTime();
+
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         long totalPacketSize = 0;
 
         try {
-            long startTimeOfPeek = System.currentTimeMillis();
             long endTimeOfPeek = 0;
 
-            long startPacketReadsTime = System.currentTimeMillis();
 
             shout("Started listening for event packets");
             while (inputStream.peek() != -1) {
@@ -954,7 +955,6 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 if (isConnected()) {
                     if (endTimeOfPeek == 0) {
                         endTimeOfPeek = System.currentTimeMillis();
-                        shout("Peek to event completed in " + (endTimeOfPeek - startTimeOfPeek) + " ms");
                     }
                     eventLastSeen = System.currentTimeMillis();
                     updateGtidSet(event);
@@ -970,6 +970,9 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             }
         } finally {
             shout("TOTAL PACKET SIZE: " + totalPacketSize);
+            packetListenTime += ((System.nanoTime() - startPacketReadsTime) / 1000000);
+            shout("PACKET LISTEN TIME: " + packetListenTime + " MS");
+
             if (isConnected()) {
                 if (completeShutdown) {
                     disconnect(); // initiate complete shutdown sequence (which includes keep alive thread)
