@@ -92,6 +92,9 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private final String username;
     private final String password;
 
+    private static long totalPeekTime = 0;
+    private static long totalActualPeekCallTime = 0;
+
     private boolean blocking = true;
     private long serverId = 65535;
     private volatile String binlogFilename;
@@ -851,6 +854,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
+    public static long getTotalPeekTime() {
+        return totalPeekTime;
+    }
+
     /**
      * @return true if client is connected, false otherwise
      */
@@ -910,9 +917,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         try {
             long endTimeOfPeek = 0;
 
-
             shout("Started listening for event packets");
             while (inputStream.peek() != -1) {
+                long startPeekTime = System.nanoTime();
+
                 int packetLength = inputStream.readInteger(3);
                 totalPacketSize += packetLength;
 
@@ -953,11 +961,12 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                     continue;
                 }
                 if (isConnected()) {
+                    eventLastSeen = System.currentTimeMillis();
+                    updateGtidSet(event);
+                    totalPeekTime += (System.nanoTime() - startPeekTime) / 1000000;
                     if (endTimeOfPeek == 0) {
                         endTimeOfPeek = System.currentTimeMillis();
                     }
-                    eventLastSeen = System.currentTimeMillis();
-                    updateGtidSet(event);
                     notifyEventListeners(event);
                     updateClientBinlogFilenameAndPosition(event);
                 }
