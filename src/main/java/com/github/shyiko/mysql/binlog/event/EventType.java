@@ -215,7 +215,7 @@ public enum EventType {
     MARIADB_GTID(162),
     MARIADB_GTID_LIST(163);
 
-    int eventId;
+    private final int eventId;
 
     EventType(int eventId) {
         this.eventId = eventId;
