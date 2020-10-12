@@ -193,18 +193,17 @@ public enum EventType {
      * Prepared XA transaction terminal event similar to XID except that it is specific to XA transaction.
      */
     XA_PREPARE(38),
-
     /**
      Extension of UPDATE_ROWS_EVENT, allowing partial values according
      to binlog_row_value_options.
      */
     PARTIAL_UPDATE_ROWS_EVENT(39),
-
     /**
      * Generated when 'binlog_transaction_compression' is set to 'ON'.
      * It encapsulates all the events of a transaction in a Zstd compressed payload.
      */
     TRANSACTION_PAYLOAD(40),
+    AURORA_PADDING(100);
 
     /**
      * MariaDB Support Events
@@ -216,10 +215,18 @@ public enum EventType {
     MARIADB_GTID(162),
     MARIADB_GTID_LIST(163);
 
-    private final int eventNumber;
+    int eventId;
 
-    EventType(int eventNumber) {
-        this.eventNumber = eventNumber;
+    EventType(int eventId) {
+        this.eventId = eventId;
+    }
+
+    public static EventType forId(int eventId) {
+        for (EventType type : EventType.values()) {
+            if (type.eventId == eventId) return type;
+        }
+
+        return null;
     }
 
     public static boolean isRowMutation(EventType eventType) {
