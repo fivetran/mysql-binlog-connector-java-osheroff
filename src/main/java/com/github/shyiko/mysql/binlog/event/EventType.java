@@ -205,7 +205,7 @@ public enum EventType {
     TRANSACTION_PAYLOAD(40),
     AURORA_PADDING(100);
 
-    int eventId;
+    private final int eventId;
 
     EventType(int eventId) {
         this.eventId = eventId;
