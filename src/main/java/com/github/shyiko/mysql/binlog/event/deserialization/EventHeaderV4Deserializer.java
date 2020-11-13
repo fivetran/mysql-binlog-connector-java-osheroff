@@ -38,8 +38,16 @@ public class EventHeaderV4Deserializer implements EventHeaderDeserializer<EventH
         return header;
     }
 
-    private static EventType getEventType(int ordinal) {
-        EventType eventType = EventType.byEventNumber(ordinal);
-        return eventType == null ? EventType.UNKNOWN : eventType;
+    /**
+     * Parses the event type based on the ordinal.
+     * If an invalid or proprietary ordinal is passed, an unknown event is returned.
+     */
+    private static EventType getEventType(int ordinal) throws IOException {
+        EventType eventType = EventType.forId(ordinal);
+
+        if (eventType == null) {
+            return EventType.forId(0);
+        }
+        return eventType;
     }
 }
