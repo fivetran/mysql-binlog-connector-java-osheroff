@@ -202,8 +202,7 @@ public enum EventType {
      * Generated when 'binlog_transaction_compression' is set to 'ON'.
      * It encapsulates all the events of a transaction in a Zstd compressed payload.
      */
-    TRANSACTION_PAYLOAD(40),
-    AURORA_PADDING(100);
+    TRANSACTION_PAYLOAD(40);
 
     private final int eventId;
 
