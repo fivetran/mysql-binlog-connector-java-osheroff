@@ -37,6 +37,11 @@ public class WriteRowsEventDataDeserializer extends AbstractRowsEventDataDeseria
         super(tableMapEventByTableId);
     }
 
+    @Override
+    protected WriteRowsEventData instance() {
+        return new WriteRowsEventData();
+    }
+
     public WriteRowsEventDataDeserializer setMayContainExtraInformation(boolean mayContainExtraInformation) {
         this.mayContainExtraInformation = mayContainExtraInformation;
         return this;

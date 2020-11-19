@@ -61,10 +61,7 @@ import java.nio.channels.Channel;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -158,6 +155,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     private long heartbeatInterval;
     private volatile long eventLastSeen;
+
+    public Set<Long> includedTables;
 
     private long connectTimeout = TimeUnit.SECONDS.toMillis(3);
 
@@ -1223,6 +1222,14 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         if (channel != null && channel.isOpen()) {
             channel.close();
         }
+    }
+
+    public void registerIncludedTables(Set<Long> tableIds) {
+        includedTables = tableIds;
+    }
+
+    public void registerIncludedTable(Long tableId) {
+        includedTables.add(tableId);
     }
 
     /**

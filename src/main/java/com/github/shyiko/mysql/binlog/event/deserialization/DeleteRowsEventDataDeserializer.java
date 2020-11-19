@@ -37,6 +37,11 @@ public class DeleteRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
         super(tableMapEventByTableId);
     }
 
+    @Override
+    protected DeleteRowsEventData instance() {
+        return new DeleteRowsEventData();
+    }
+
     public DeleteRowsEventDataDeserializer setMayContainExtraInformation(boolean mayContainExtraInformation) {
         this.mayContainExtraInformation = mayContainExtraInformation;
         return this;

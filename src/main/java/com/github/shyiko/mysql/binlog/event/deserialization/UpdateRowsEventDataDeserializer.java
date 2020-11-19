@@ -38,6 +38,11 @@ public class UpdateRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
         super(tableMapEventByTableId);
     }
 
+    @Override
+    protected UpdateRowsEventData instance() {
+        return new UpdateRowsEventData();
+    }
+
     public UpdateRowsEventDataDeserializer setMayContainExtraInformation(boolean mayContainExtraInformation) {
         this.mayContainExtraInformation = mayContainExtraInformation;
         return this;

@@ -15,12 +15,7 @@
  */
 package com.github.shyiko.mysql.binlog.event.deserialization;
 
-import com.github.shyiko.mysql.binlog.event.Event;
-import com.github.shyiko.mysql.binlog.event.EventData;
-import com.github.shyiko.mysql.binlog.event.EventHeader;
-import com.github.shyiko.mysql.binlog.event.EventType;
-import com.github.shyiko.mysql.binlog.event.FormatDescriptionEventData;
-import com.github.shyiko.mysql.binlog.event.TableMapEventData;
+import com.github.shyiko.mysql.binlog.event.*;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
 import java.io.IOException;
@@ -291,7 +286,11 @@ public class EventDeserializer {
         try {
             inputStream.enterBlock(eventBodyLength);
             try {
-                eventData = eventDataDeserializer.deserialize(inputStream);
+                if (eventHeader instanceof EventHeaderV4) {
+                    eventData = eventDataDeserializer.deserialize((EventHeaderV4) eventHeader, inputStream);
+                } else {
+                    eventData = eventDataDeserializer.deserialize(inputStream);
+                }
             } finally {
                 inputStream.skipToTheEndOfTheBlock();
                 inputStream.skip(checksumLength);
@@ -400,6 +399,11 @@ public class EventDeserializer {
             public Deserializer(EventDataDeserializer internal, EventDataDeserializer external) {
                 this.internal = internal;
                 this.external = external;
+            }
+
+            @Override
+            public EventData deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException {
+                return deserialize(inputStream);
             }
 
             @Override

@@ -16,6 +16,8 @@
 package com.github.shyiko.mysql.binlog.event.deserialization;
 
 import com.github.shyiko.mysql.binlog.event.EventData;
+import com.github.shyiko.mysql.binlog.event.EventHeaderV4;
+import com.github.shyiko.mysql.binlog.event.EventType;
 import com.github.shyiko.mysql.binlog.event.TableMapEventData;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
@@ -23,10 +25,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Time;
-import java.util.BitSet;
-import java.util.Calendar;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
 /**
  * Whole class is basically a mix of <a href="https://code.google.com/p/open-replicator">open-replicator</a>'s
@@ -72,6 +71,15 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
 
     private final Map<Long, TableMapEventData> tableMapEventByTableId;
 
+    public void setIncludedTables(Collection<Long> includedTables) {
+        this.includedTables = includedTables;
+    }
+
+    public Collection<Long> getIncludedTables() {
+        return includedTables;
+    }
+
+    private Collection<Long> includedTables;
     private boolean deserializeDateAndTimeAsLong;
     private Long invalidDateAndTimeRepresentation;
     private boolean microsecondsPrecision;
@@ -80,6 +88,20 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
     public AbstractRowsEventDataDeserializer(Map<Long, TableMapEventData> tableMapEventByTableId) {
         this.tableMapEventByTableId = tableMapEventByTableId;
     }
+
+    @Override
+    public T deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException {
+        long tableId = inputStream.readLong(6);
+
+        if (!getIncludedTables().contains(tableId)) {
+            header.setEventType(EventType.IGNORABLE);
+            return instance();
+        }
+
+        return deserialize(inputStream);
+    }
+
+    abstract protected T instance();
 
     void setDeserializeDateAndTimeAsLong(boolean value) {
         this.deserializeDateAndTimeAsLong = value;

@@ -16,6 +16,8 @@
 package com.github.shyiko.mysql.binlog.event.deserialization;
 
 import com.github.shyiko.mysql.binlog.event.EventData;
+import com.github.shyiko.mysql.binlog.event.EventHeader;
+import com.github.shyiko.mysql.binlog.event.EventHeaderV4;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
 import java.io.IOException;
@@ -25,6 +27,6 @@ import java.io.IOException;
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
 public interface EventDataDeserializer<T extends EventData> {
-
+    T deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException;
     T deserialize(ByteArrayInputStream inputStream) throws IOException;
 }
