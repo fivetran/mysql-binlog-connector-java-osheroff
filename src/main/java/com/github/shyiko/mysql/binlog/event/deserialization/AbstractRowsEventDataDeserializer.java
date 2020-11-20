@@ -15,17 +15,14 @@
  */
 package com.github.shyiko.mysql.binlog.event.deserialization;
 
-import com.github.shyiko.mysql.binlog.event.EventData;
-import com.github.shyiko.mysql.binlog.event.EventHeaderV4;
-import com.github.shyiko.mysql.binlog.event.EventType;
-import com.github.shyiko.mysql.binlog.event.TableMapEventData;
+import com.github.shyiko.mysql.binlog.event.*;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.sql.Time;
 import java.util.*;
 
 /**
@@ -85,26 +82,28 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
     private Long invalidDateAndTimeRepresentation;
     private boolean microsecondsPrecision;
     private boolean deserializeCharAndBinaryAsByteArray;
-    protected Long tableId;
 
     public AbstractRowsEventDataDeserializer(Map<Long, TableMapEventData> tableMapEventByTableId) {
         this.tableMapEventByTableId = tableMapEventByTableId;
     }
 
     public T deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException {
-        extractTableId(inputStream);
+        long tableId = inputStream.readLong(6);
 
         if (!getIncludedTables().contains(tableId)) {
             header.setEventType(EventType.IGNORABLE);
             return instance();
         }
 
-        return deserialize(inputStream);
+        return deserializeFromTableId(tableId, inputStream);
     }
 
-    protected void extractTableId(ByteArrayInputStream inputStream) throws IOException {
-        if (tableId == null) tableId = inputStream.readLong(6);
+    public T deserialize(ByteArrayInputStream inputStream) throws IOException {
+        long tableId = inputStream.readLong(6);
+        return deserializeFromTableId(tableId, inputStream);
     }
+
+    abstract public T deserializeFromTableId(Long tableId, ByteArrayInputStream inputStream) throws IOException;
 
     abstract protected T instance();
 

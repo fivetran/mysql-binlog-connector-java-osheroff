@@ -20,6 +20,7 @@ import com.github.shyiko.mysql.binlog.event.UpdateRowsEventData;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -39,19 +40,8 @@ public class UpdateRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
     }
 
     @Override
-    protected UpdateRowsEventData instance() {
-        return new UpdateRowsEventData();
-    }
-
-    public UpdateRowsEventDataDeserializer setMayContainExtraInformation(boolean mayContainExtraInformation) {
-        this.mayContainExtraInformation = mayContainExtraInformation;
-        return this;
-    }
-
-    @Override
-    public UpdateRowsEventData deserialize(ByteArrayInputStream inputStream) throws IOException {
+    public UpdateRowsEventData deserializeFromTableId(Long tableId, ByteArrayInputStream inputStream) throws IOException {
         UpdateRowsEventData eventData = new UpdateRowsEventData();
-        extractTableId(inputStream);
         eventData.setTableId(tableId);
         inputStream.skip(2); // reserved
         if (mayContainExtraInformation) {
@@ -64,6 +54,17 @@ public class UpdateRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
         eventData.setRows(deserializeRows(eventData, inputStream));
         return eventData;
     }
+
+    @Override
+    protected UpdateRowsEventData instance() {
+        return new UpdateRowsEventData();
+    }
+
+    public UpdateRowsEventDataDeserializer setMayContainExtraInformation(boolean mayContainExtraInformation) {
+        this.mayContainExtraInformation = mayContainExtraInformation;
+        return this;
+    }
+
 
     private List<Map.Entry<Serializable[], Serializable[]>> deserializeRows(UpdateRowsEventData eventData,
             ByteArrayInputStream inputStream) throws IOException {
@@ -80,5 +81,4 @@ public class UpdateRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
         }
         return rows;
     }
-
 }

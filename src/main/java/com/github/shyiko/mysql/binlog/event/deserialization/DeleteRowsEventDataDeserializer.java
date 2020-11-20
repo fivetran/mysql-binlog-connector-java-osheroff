@@ -48,9 +48,8 @@ public class DeleteRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
     }
 
     @Override
-    public DeleteRowsEventData deserialize(ByteArrayInputStream inputStream) throws IOException {
+    public DeleteRowsEventData deserializeFromTableId(Long tableId, ByteArrayInputStream inputStream) throws IOException {
         DeleteRowsEventData eventData = new DeleteRowsEventData();
-        extractTableId(inputStream);
         eventData.setTableId(tableId);
         inputStream.readInteger(2); // reserved
         if (mayContainExtraInformation) {
@@ -71,5 +70,4 @@ public class DeleteRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
         }
         return result;
     }
-
 }
