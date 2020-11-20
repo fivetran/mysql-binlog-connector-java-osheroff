@@ -27,6 +27,5 @@ import java.io.IOException;
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
 public interface EventDataDeserializer<T extends EventData> {
-    T deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException;
     T deserialize(ByteArrayInputStream inputStream) throws IOException;
 }

@@ -19,10 +19,7 @@ import com.github.shyiko.mysql.binlog.event.*;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
 import java.io.IOException;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
@@ -32,6 +29,12 @@ public class EventDeserializer {
     private final EventHeaderDeserializer eventHeaderDeserializer;
     private final EventDataDeserializer defaultEventDataDeserializer;
     private final Map<EventType, EventDataDeserializer> eventDataDeserializers;
+
+    public void setIncludedTables(Collection<Long> includedTables) {
+        this.includedTables = includedTables;
+    }
+
+    private Collection<Long> includedTables = new HashSet<Long>();
 
     private EnumSet<CompatibilityMode> compatibilitySet = EnumSet.noneOf(CompatibilityMode.class);
     private int checksumLength;
@@ -286,8 +289,10 @@ public class EventDeserializer {
         try {
             inputStream.enterBlock(eventBodyLength);
             try {
-                if (eventHeader instanceof EventHeaderV4) {
-                    eventData = eventDataDeserializer.deserialize((EventHeaderV4) eventHeader, inputStream);
+                if (eventHeader instanceof EventHeaderV4 && eventDataDeserializer instanceof AbstractRowsEventDataDeserializer) {
+                    AbstractRowsEventDataDeserializer rowEventDeserializer = (AbstractRowsEventDataDeserializer) eventDataDeserializer;
+                    rowEventDeserializer.setIncludedTables(includedTables);
+                    eventData = rowEventDeserializer.deserialize((EventHeaderV4) eventHeader, inputStream);
                 } else {
                     eventData = eventDataDeserializer.deserialize(inputStream);
                 }
@@ -399,11 +404,6 @@ public class EventDeserializer {
             public Deserializer(EventDataDeserializer internal, EventDataDeserializer external) {
                 this.internal = internal;
                 this.external = external;
-            }
-
-            @Override
-            public EventData deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException {
-                return deserialize(inputStream);
             }
 
             @Override

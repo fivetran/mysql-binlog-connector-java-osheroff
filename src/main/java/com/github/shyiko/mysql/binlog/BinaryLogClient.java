@@ -1226,10 +1226,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     public void registerIncludedTables(Set<Long> tableIds) {
         includedTables = tableIds;
-    }
-
-    public void registerIncludedTable(Long tableId) {
-        includedTables.add(tableId);
+        eventDeserializer.setIncludedTables(tableIds);
     }
 
     /**

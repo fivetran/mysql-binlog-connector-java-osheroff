@@ -22,6 +22,7 @@ import com.github.shyiko.mysql.binlog.event.TableMapEventData;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Time;
@@ -79,19 +80,19 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
         return includedTables;
     }
 
-    private Collection<Long> includedTables;
+    private Collection<Long> includedTables = new HashSet<Long>();
     private boolean deserializeDateAndTimeAsLong;
     private Long invalidDateAndTimeRepresentation;
     private boolean microsecondsPrecision;
     private boolean deserializeCharAndBinaryAsByteArray;
+    protected Long tableId;
 
     public AbstractRowsEventDataDeserializer(Map<Long, TableMapEventData> tableMapEventByTableId) {
         this.tableMapEventByTableId = tableMapEventByTableId;
     }
 
-    @Override
     public T deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException {
-        long tableId = inputStream.readLong(6);
+        extractTableId(inputStream);
 
         if (!getIncludedTables().contains(tableId)) {
             header.setEventType(EventType.IGNORABLE);
@@ -99,6 +100,10 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
         }
 
         return deserialize(inputStream);
+    }
+
+    protected void extractTableId(ByteArrayInputStream inputStream) throws IOException {
+        if (tableId == null) tableId = inputStream.readLong(6);
     }
 
     abstract protected T instance();

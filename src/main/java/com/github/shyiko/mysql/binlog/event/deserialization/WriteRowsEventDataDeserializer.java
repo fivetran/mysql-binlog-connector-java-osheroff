@@ -50,7 +50,8 @@ public class WriteRowsEventDataDeserializer extends AbstractRowsEventDataDeseria
     @Override
     public WriteRowsEventData deserialize(ByteArrayInputStream inputStream) throws IOException {
         WriteRowsEventData eventData = new WriteRowsEventData();
-        eventData.setTableId(inputStream.readLong(6));
+        extractTableId(inputStream);
+        eventData.setTableId(tableId);
         inputStream.skip(2); // reserved
         if (mayContainExtraInformation) {
             int extraInfoLength = inputStream.readInteger(2);

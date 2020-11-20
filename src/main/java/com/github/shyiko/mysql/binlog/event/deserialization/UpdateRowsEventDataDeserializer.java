@@ -51,7 +51,8 @@ public class UpdateRowsEventDataDeserializer extends AbstractRowsEventDataDeseri
     @Override
     public UpdateRowsEventData deserialize(ByteArrayInputStream inputStream) throws IOException {
         UpdateRowsEventData eventData = new UpdateRowsEventData();
-        eventData.setTableId(inputStream.readLong(6));
+        extractTableId(inputStream);
+        eventData.setTableId(tableId);
         inputStream.skip(2); // reserved
         if (mayContainExtraInformation) {
             int extraInfoLength = inputStream.readInteger(2);
