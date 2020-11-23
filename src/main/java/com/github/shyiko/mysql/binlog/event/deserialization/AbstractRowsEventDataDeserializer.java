@@ -78,6 +78,16 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
     }
 
     private Collection<Long> includedTables = new HashSet<Long>();
+
+    public boolean isIgnoreExcludedTables() {
+        return ignoreExcludedTables;
+    }
+
+    public void setIgnoreExcludedTables(boolean ignoreExcludedTables) {
+        this.ignoreExcludedTables = ignoreExcludedTables;
+    }
+
+    private boolean ignoreExcludedTables = false;
     private boolean deserializeDateAndTimeAsLong;
     private Long invalidDateAndTimeRepresentation;
     private boolean microsecondsPrecision;
@@ -90,7 +100,7 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
     public T deserialize(EventHeaderV4 header, ByteArrayInputStream inputStream) throws IOException {
         long tableId = inputStream.readLong(6);
 
-        if (!getIncludedTables().contains(tableId)) {
+        if (ignoreExcludedTables && !getIncludedTables().contains(tableId)) {
             header.setEventType(EventType.IGNORABLE);
             return instance();
         }

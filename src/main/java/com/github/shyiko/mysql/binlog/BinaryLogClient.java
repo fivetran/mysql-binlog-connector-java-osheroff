@@ -156,7 +156,16 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private long heartbeatInterval;
     private volatile long eventLastSeen;
 
-    public Set<Long> includedTables;
+    public boolean isIgnoreExcludedTables() {
+        return ignoreExcludedTables;
+    }
+
+    public void setIgnoreExcludedTables(boolean ignoreExcludedTables) {
+        this.ignoreExcludedTables = ignoreExcludedTables;
+    }
+
+    private boolean ignoreExcludedTables = false;
+    private Set<Long> includedTables;
 
     private long connectTimeout = TimeUnit.SECONDS.toMillis(3);
 
@@ -1226,6 +1235,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     public void registerIncludedTables(Set<Long> tableIds) {
         includedTables = tableIds;
+        eventDeserializer.setIgnoreExcludedTables(ignoreExcludedTables);
         eventDeserializer.setIncludedTables(tableIds);
     }
 

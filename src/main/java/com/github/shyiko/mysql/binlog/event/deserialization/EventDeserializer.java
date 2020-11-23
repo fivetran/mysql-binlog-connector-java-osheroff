@@ -34,6 +34,15 @@ public class EventDeserializer {
         this.includedTables = includedTables;
     }
 
+    public boolean isIgnoreExcludedTables() {
+        return ignoreExcludedTables;
+    }
+
+    public void setIgnoreExcludedTables(boolean ignoreExcludedTables) {
+        this.ignoreExcludedTables = ignoreExcludedTables;
+    }
+
+    private boolean ignoreExcludedTables = false;
     private Collection<Long> includedTables = new HashSet<Long>();
 
     private EnumSet<CompatibilityMode> compatibilitySet = EnumSet.noneOf(CompatibilityMode.class);
@@ -291,6 +300,7 @@ public class EventDeserializer {
             try {
                 if (eventHeader instanceof EventHeaderV4 && eventDataDeserializer instanceof AbstractRowsEventDataDeserializer) {
                     AbstractRowsEventDataDeserializer rowEventDeserializer = (AbstractRowsEventDataDeserializer) eventDataDeserializer;
+                    rowEventDeserializer.setIgnoreExcludedTables(ignoreExcludedTables);
                     rowEventDeserializer.setIncludedTables(includedTables);
                     eventData = rowEventDeserializer.deserialize((EventHeaderV4) eventHeader, inputStream);
                 } else {
