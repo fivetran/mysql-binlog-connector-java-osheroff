@@ -17,28 +17,16 @@ package com.github.shyiko.mysql.binlog;
 
 import com.github.shyiko.mysql.binlog.event.*;
 import com.github.shyiko.mysql.binlog.event.deserialization.*;
+import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer.EventDataWrapper;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 import com.github.shyiko.mysql.binlog.jmx.BinaryLogClientMXBean;
-import com.github.shyiko.mysql.binlog.network.AuthenticationException;
-import com.github.shyiko.mysql.binlog.network.ClientCapabilities;
-import com.github.shyiko.mysql.binlog.network.DefaultSSLSocketFactory;
-import com.github.shyiko.mysql.binlog.network.SSLMode;
-import com.github.shyiko.mysql.binlog.network.SSLSocketFactory;
-import com.github.shyiko.mysql.binlog.network.ServerException;
-import com.github.shyiko.mysql.binlog.network.SocketFactory;
-import com.github.shyiko.mysql.binlog.network.protocol.ErrorPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.Packet;
-import com.github.shyiko.mysql.binlog.network.protocol.PacketChannel;
-import com.github.shyiko.mysql.binlog.network.protocol.ResultSetRowPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateNativePasswordCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.Command;
-import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogGtidCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.PingCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.QueryCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.SSLRequestCommand;
+import com.github.shyiko.mysql.binlog.network.*;
+import com.github.shyiko.mysql.binlog.network.protocol.*;
+import com.github.shyiko.mysql.binlog.network.protocol.command.*;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -50,22 +38,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 
 /**
@@ -689,7 +667,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             Class<? extends EventDataDeserializer<?>> eventDataDeserializerClass) {
         EventDataDeserializer<?> eventDataDeserializer = eventDeserializer.getEventDataDeserializer(eventType);
         if (eventDataDeserializer.getClass() != eventDataDeserializerClass &&
-            eventDataDeserializer.getClass() != EventDataWrapper.Deserializer.class) {
+            eventDataDeserializer.getClass() != EventDeserializer.EventDataWrapper.Deserializer.class) {
             EventDataDeserializer<?> internalEventDataDeserializer;
             try {
                 internalEventDataDeserializer = eventDataDeserializerClass.newInstance();
@@ -697,7 +675,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 throw new RuntimeException(e);
             }
             eventDeserializer.setEventDataDeserializer(eventType,
-                new EventDataWrapper.Deserializer(internalEventDataDeserializer,
+                new EventDeserializer.EventDataWrapper.Deserializer(internalEventDataDeserializer,
                     eventDataDeserializer));
         }
     }
@@ -1024,7 +1002,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         EventHeader eventHeader = event.getHeader();
         EventType eventType = eventHeader.getEventType();
         if (eventType == EventType.ROTATE) {
-            RotateEventData rotateEventData = (RotateEventData) EventDataWrapper.internal(event.getData());
+            RotateEventData rotateEventData = (RotateEventData) EventDeserializer.EventDataWrapper.internal(event.getData());
             binlogFilename = rotateEventData.getBinlogFilename();
             binlogPosition = rotateEventData.getBinlogPosition();
         } else
@@ -1048,7 +1026,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         EventHeader eventHeader = event.getHeader();
         switch(eventHeader.getEventType()) {
             case GTID:
-                GtidEventData gtidEventData = (GtidEventData) EventDataWrapper.internal(event.getData());
+                GtidEventData gtidEventData = (GtidEventData) EventDeserializer.EventDataWrapper.internal(event.getData());
                 gtid = gtidEventData.getGtid();
                 break;
             case XID:
@@ -1056,7 +1034,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 tx = false;
                 break;
             case QUERY:
-                QueryEventData queryEventData = (QueryEventData) EventDataWrapper.internal(event.getData());
+                QueryEventData queryEventData = (QueryEventData) EventDeserializer.EventDataWrapper.internal(event.getData());
                 String sql = queryEventData.getSql();
                 if (sql == null) {
                     break;
@@ -1145,7 +1123,6 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                                                " choked on " + event, e);
                 }
             }
-        }
     }
 
     /**
