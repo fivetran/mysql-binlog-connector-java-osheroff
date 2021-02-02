@@ -105,6 +105,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     private final List<EventListener> eventListeners = new CopyOnWriteArrayList<EventListener>();
     private final List<LifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<LifecycleListener>();
+    private boolean abortRequest = false;
 
     private SocketFactory socketFactory;
     private SSLSocketFactory sslSocketFactory;
@@ -927,7 +928,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         try {
-            while (inputStream.peek() != -1) {
+            while (!abortRequest && inputStream.peek() != -1) {
                 int packetLength = inputStream.readInteger(3);
                 //noinspection ResultOfMethodCallIgnored
                 inputStream.skip(1); // 1 byte for sequence
@@ -975,6 +976,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 }
             }
         } finally {
+            abortRequest = false;
             if (connected) {
                 if (completeShutdown) {
                     disconnect(); // initiate complete shutdown sequence (which includes keep alive thread)
@@ -1173,6 +1175,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         terminateKeepAliveThread(keepAliveThreadExecutor);
         closeChannel(channel);
         waitForConnectToTerminate(connectLatch);
+    }
+
+    public void abort() {
+        abortRequest = true;
     }
 
     private void terminateKeepAliveThread(final ExecutorService threadExecutor) {
