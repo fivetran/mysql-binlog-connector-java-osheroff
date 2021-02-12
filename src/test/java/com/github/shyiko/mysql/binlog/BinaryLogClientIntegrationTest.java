@@ -100,7 +100,7 @@ public class BinaryLogClientIntegrationTest {
     private final TimeZone timeZoneBeforeTheTest = TimeZone.getDefault();
 
     protected MySQLConnection master, slave;
-    protected BinaryLogClient client;
+    protected NewBinaryLogClient client;
     protected CountDownEventListener eventListener;
 
     @BeforeClass
@@ -114,7 +114,7 @@ public class BinaryLogClientIntegrationTest {
         slave = new MySQLConnection(bundle.getString(prefix + "slave.hostname"),
                 Integer.parseInt(bundle.getString(prefix + "slave.port")),
                 bundle.getString(prefix + "slave.superUsername"), bundle.getString(prefix + "slave.superPassword"));
-        client = new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
+        client = new NewBinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.CHAR_AND_BINARY_AS_BYTE_ARRAY,
             CompatibilityMode.DATE_AND_TIME_AS_LONG);
@@ -384,7 +384,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testDeserializationOfDateAndTimeAsLong() throws Exception {
-        final BinaryLogClient client = new BinaryLogClient(slave.hostname, slave.port,
+        final NewBinaryLogClient client = new NewBinaryLogClient(slave.hostname, slave.port,
             slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.DATE_AND_TIME_AS_LONG);
@@ -400,7 +400,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testDeserializationOfDateAndTimeAsLongMicrosecondsPrecision() throws Exception {
-        final BinaryLogClient client = new BinaryLogClient(slave.hostname, slave.port,
+        final NewBinaryLogClient client = new NewBinaryLogClient(slave.hostname, slave.port,
             slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.DATE_AND_TIME_AS_LONG_MICRO);
@@ -439,8 +439,8 @@ public class BinaryLogClientIntegrationTest {
         return writeAndCaptureRow(client, columnDefinition, values);
     }
 
-    private Serializable[] writeAndCaptureRow(BinaryLogClient client, final String columnDefinition,
-            final String... values) throws Exception {
+    private Serializable[] writeAndCaptureRow(NewBinaryLogClient client, final String columnDefinition,
+                                              final String... values) throws Exception {
         CapturingEventListener capturingEventListener = new CapturingEventListener();
         client.registerEventListener(capturingEventListener);
         CountDownEventListener eventListener = new CountDownEventListener();
@@ -503,7 +503,7 @@ public class BinaryLogClientIntegrationTest {
                 }
             });
             eventListener.waitFor(WriteRowsEventData.class, 3, DEFAULT_TIMEOUT);
-            final BinaryLogClient anotherClient = new BinaryLogClient(slave.hostname, slave.port,
+            final NewBinaryLogClient anotherClient = new NewBinaryLogClient(slave.hostname, slave.port,
                 slave.username, slave.password);
             anotherClient.registerLifecycleListener(new TraceLifecycleListener());
             CountDownEventListener anotherClientEventListener = new CountDownEventListener();
@@ -648,7 +648,7 @@ public class BinaryLogClientIntegrationTest {
             bindInSeparateThread(tcpReverseProxy);
             try {
                 client.disconnect();
-                final BinaryLogClient clientOverProxy = new BinaryLogClient(slave.hostname, tcpReverseProxy.getPort(),
+                final NewBinaryLogClient clientOverProxy = new NewBinaryLogClient(slave.hostname, tcpReverseProxy.getPort(),
                         slave.username, slave.password);
                 clientOverProxy.setKeepAliveInterval(TimeUnit.MILLISECONDS.toMillis(100));
                 clientOverProxy.setKeepAliveConnectTimeout(TimeUnit.SECONDS.toMillis(2));
@@ -728,7 +728,7 @@ public class BinaryLogClientIntegrationTest {
     protected void testCommunicationFailure(EventDeserializer eventDeserializer) throws Exception {
         try {
             client.disconnect();
-            final BinaryLogClient clientWithKeepAlive = new BinaryLogClient(slave.hostname, slave.port,
+            final NewBinaryLogClient clientWithKeepAlive = new NewBinaryLogClient(slave.hostname, slave.port,
                     slave.username, slave.password);
             clientWithKeepAlive.setKeepAliveInterval(TimeUnit.MILLISECONDS.toMillis(100));
             clientWithKeepAlive.setKeepAliveConnectTimeout(TimeUnit.SECONDS.toMillis(2));
@@ -766,7 +766,7 @@ public class BinaryLogClientIntegrationTest {
     public void testCustomEventDataDeserializers() throws Exception {
         try {
             client.disconnect();
-            final BinaryLogClient binaryLogClient = new BinaryLogClient(slave.hostname, slave.port,
+            final NewBinaryLogClient binaryLogClient = new NewBinaryLogClient(slave.hostname, slave.port,
                     slave.username, slave.password);
             binaryLogClient.registerEventListener(new TraceEventListener());
             binaryLogClient.registerEventListener(eventListener);
@@ -812,8 +812,8 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testExceptionIsThrownWhenProvidedWithWrongCredentials() throws Exception {
-        BinaryLogClient binaryLogClient =
-            new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password + "^_^");
+        NewBinaryLogClient binaryLogClient =
+            new NewBinaryLogClient(slave.hostname, slave.port, slave.username, slave.password + "^_^");
         try {
             binaryLogClient.connect();
             fail("Wrong password should have resulted in AuthenticationException being thrown");
@@ -828,7 +828,7 @@ public class BinaryLogClientIntegrationTest {
         String prefix = "jdbc.mysql.replication.";
         String slaveUsername = bundle.getString(prefix + "slave.slaveUsername");
         String slavePassword = bundle.getString(prefix + "slave.slavePassword");
-        new BinaryLogClient(slave.hostname, slave.port, slaveUsername, slavePassword).connect();
+        new NewBinaryLogClient(slave.hostname, slave.port, slaveUsername, slavePassword).connect();
     }
 
     private void bindInSeparateThread(final TCPReverseProxy tcpReverseProxy) throws InterruptedException {
@@ -848,7 +848,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test(expectedExceptions = AuthenticationException.class)
     public void testAuthenticationFailsWhenNonExistingSchemaProvided() throws Exception {
-        new BinaryLogClient(slave.hostname, slave.port, "mbcj_test_non_existing", slave.username, slave.password).
+        new NewBinaryLogClient(slave.hostname, slave.port, "mbcj_test_non_existing", slave.username, slave.password).
             connect(DEFAULT_TIMEOUT);
     }
 
@@ -864,8 +864,8 @@ public class BinaryLogClientIntegrationTest {
             }
         });
         eventListener.waitFor(QueryEventData.class, 4, DEFAULT_TIMEOUT);
-        BinaryLogClient isolatedClient =
-            new BinaryLogClient(slave.hostname, slave.port, "mbcj_test_isolated", slave.username, slave.password);
+        NewBinaryLogClient isolatedClient =
+            new NewBinaryLogClient(slave.hostname, slave.port, "mbcj_test_isolated", slave.username, slave.password);
         try {
             CountDownEventListener isolatedEventListener = new CountDownEventListener();
             isolatedClient.registerEventListener(isolatedEventListener);
@@ -890,8 +890,8 @@ public class BinaryLogClientIntegrationTest {
         // a more reliable way would be to use buffered 2-level concurrent filter input stream
         try {
             client.disconnect();
-            final BinaryLogClient binaryLogClient =
-                new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
+            final NewBinaryLogClient binaryLogClient =
+                new NewBinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
             final Lock inputStreamLock = new ReentrantLock();
             final AtomicBoolean breakOutputStream = new AtomicBoolean();
             binaryLogClient.setSocketFactory(new SocketFactory() {

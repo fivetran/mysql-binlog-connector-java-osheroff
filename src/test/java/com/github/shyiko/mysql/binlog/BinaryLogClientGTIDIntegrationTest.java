@@ -105,7 +105,7 @@ public class BinaryLogClientGTIDIntegrationTest extends BinaryLogClientIntegrati
         EventDeserializer eventDeserializer = new EventDeserializer();
         try {
             client.disconnect();
-            final BinaryLogClient clientWithKeepAlive = new BinaryLogClient(slave.hostname(), slave.port(),
+            final com.github.shyiko.mysql.binlog.NewBinaryLogClient clientWithKeepAlive = new com.github.shyiko.mysql.binlog.NewBinaryLogClient(slave.hostname(), slave.port(),
                 slave.username(), slave.password());
 
             clientWithKeepAlive.setGtidSet(initialGTIDSet[0]);

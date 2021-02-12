@@ -40,7 +40,7 @@ public class BinaryLogClientTest {
 
     @Test
     public void testEventListenersManagement() {
-        BinaryLogClient binaryLogClient = new BinaryLogClient("localhost", 3306, "root", "mysql");
+        NewBinaryLogClient binaryLogClient = new NewBinaryLogClient("localhost", 3306, "root", "mysql");
         assertTrue(binaryLogClient.getEventListeners().isEmpty());
         TraceEventListener traceEventListener = new TraceEventListener();
         binaryLogClient.registerEventListener(traceEventListener);
@@ -55,7 +55,7 @@ public class BinaryLogClientTest {
 
     @Test
     public void testLifecycleListenersManagement() {
-        BinaryLogClient binaryLogClient = new BinaryLogClient("localhost", 3306, "root", "mysql");
+        NewBinaryLogClient binaryLogClient = new NewBinaryLogClient("localhost", 3306, "root", "mysql");
         assertTrue(binaryLogClient.getLifecycleListeners().isEmpty());
         TraceLifecycleListener traceLifecycleListener = new TraceLifecycleListener();
         binaryLogClient.registerLifecycleListener(traceLifecycleListener);
@@ -71,12 +71,12 @@ public class BinaryLogClientTest {
 
     @Test(expectedExceptions = TimeoutException.class)
     public void testNoConnectionTimeout() throws Exception {
-        new BinaryLogClient("_localhost_", 3306, "root", "mysql").connect(0);
+        new NewBinaryLogClient("_localhost_", 3306, "root", "mysql").connect(0);
     }
 
     @Test(timeOut = 15000)
     public void testConnectionTimeout() throws Exception {
-        final BinaryLogClient binaryLogClient = new BinaryLogClient("localhost", 33059, "root", "mysql");
+        final NewBinaryLogClient binaryLogClient = new NewBinaryLogClient("localhost", 33059, "root", "mysql");
         final CountDownLatch socketBound = new CountDownLatch(1);
         final CountDownLatch binaryLogClientDisconnected = new CountDownLatch(1);
         new Thread(new Runnable() {
@@ -110,12 +110,12 @@ public class BinaryLogClientTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testNullEventDeserializerIsNotAllowed() throws Exception {
-        new BinaryLogClient("localhost", 3306, "root", "mysql").setEventDeserializer(null);
+        new NewBinaryLogClient("localhost", 3306, "root", "mysql").setEventDeserializer(null);
     }
 
     @Test(timeOut = 15000)
     public void testDisconnectWhileBlockedByFBRead() throws Exception {
-        final BinaryLogClient binaryLogClient = new BinaryLogClient("localhost", 33060, "root", "mysql");
+        final NewBinaryLogClient binaryLogClient = new NewBinaryLogClient("localhost", 33060, "root", "mysql");
         final CountDownLatch readAttempted = new CountDownLatch(1);
         binaryLogClient.setSocketFactory(new SocketFactory() {
             @Override

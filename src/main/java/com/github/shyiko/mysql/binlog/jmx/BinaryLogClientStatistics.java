@@ -16,6 +16,9 @@
 package com.github.shyiko.mysql.binlog.jmx;
 
 import com.github.shyiko.mysql.binlog.BinaryLogClient;
+import com.github.shyiko.mysql.binlog.BinaryLogClient.EventListener;
+import com.github.shyiko.mysql.binlog.BinaryLogClient.LifecycleListener;
+import com.github.shyiko.mysql.binlog.NewBinaryLogClient;
 import com.github.shyiko.mysql.binlog.event.Event;
 import com.github.shyiko.mysql.binlog.event.EventHeader;
 
@@ -26,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
 public class BinaryLogClientStatistics implements BinaryLogClientStatisticsMXBean,
-        BinaryLogClient.EventListener, BinaryLogClient.LifecycleListener {
+    EventListener, LifecycleListener {
 
     private AtomicReference<EventHeader> lastEventHeader = new AtomicReference<EventHeader>();
     private AtomicLong timestampOfLastEvent = new AtomicLong();
@@ -38,7 +41,7 @@ public class BinaryLogClientStatistics implements BinaryLogClientStatisticsMXBea
     public BinaryLogClientStatistics() {
     }
 
-    public BinaryLogClientStatistics(BinaryLogClient binaryLogClient) {
+    public BinaryLogClientStatistics(NewBinaryLogClient binaryLogClient) {
         binaryLogClient.registerEventListener(this);
         binaryLogClient.registerLifecycleListener(this);
     }
