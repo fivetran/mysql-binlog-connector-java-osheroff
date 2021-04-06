@@ -976,10 +976,15 @@ public class NewBinaryLogClient extends BinaryLogClient {
                 }
             }
         } finally {
-            abortRequest = false;
             if (connected) {
-                if (completeShutdown) {
+                if (completeShutdown || abortRequest) {
+                    System.out.println("***********");
+                    System.out.println("MEDIEVAL ABORT ENGAGED");
+                    System.out.println("***********");
                     disconnect(); // initiate complete shutdown sequence (which includes keep alive thread)
+                    System.out.println("***********");
+                    System.out.println("DISCONNECTED");
+                    System.out.println("***********");
                 } else {
                     closeChannel(channel);
                 }
@@ -1174,7 +1179,13 @@ public class NewBinaryLogClient extends BinaryLogClient {
 
         terminateKeepAliveThread(keepAliveThreadExecutor);
         closeChannel(channel);
+        System.out.println("**********");
+        System.out.println("WAITING");
+        System.out.println("**********");
         waitForConnectToTerminate(connectLatch);
+        System.out.println("**********");
+        System.out.println("DONE");
+        System.out.println("**********");
     }
 
     @Override
