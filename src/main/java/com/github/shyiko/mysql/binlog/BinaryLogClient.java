@@ -593,6 +593,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private PacketChannel openChannel(final long connectTimeout) throws IOException {
         Socket socket = socketFactory != null ? socketFactory.createSocket() : new Socket();
         socket.connect(new InetSocketAddress(hostname, port), (int) connectTimeout);
+        scream("UPDATING SOCKET SEND BUFFER SIZE");
+        socket.setSendBufferSize(43690 * 2);
         scream(String.format("SOCKET SIZE: %d", socket.getReceiveBufferSize()));
         return new PacketChannel(socket);
     }

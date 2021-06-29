@@ -898,7 +898,7 @@ public class BinaryLogClientIntegrationTest {
 
                 @Override
                 public Socket createSocket() throws SocketException {
-                    return new Socket() {
+                    Socket socket = new Socket() {
 
                         @Override
                         public InputStream getInputStream() throws IOException {
@@ -929,6 +929,8 @@ public class BinaryLogClientIntegrationTest {
                             };
                         }
                     };
+                    socket.setSendBufferSize(100000);
+                    return socket;
                 }
             });
             binaryLogClient.registerEventListener(eventListener);
