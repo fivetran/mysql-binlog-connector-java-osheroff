@@ -582,9 +582,18 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
+    public static void scream(String... messages) {
+        System.out.println("************************************");
+        for (String message : messages) {
+            System.out.println(String.format("*****\t%s", message));
+        }
+        System.out.println("************************************");
+    }
+
     private PacketChannel openChannel(final long connectTimeout) throws IOException {
         Socket socket = socketFactory != null ? socketFactory.createSocket() : new Socket();
         socket.connect(new InetSocketAddress(hostname, port), (int) connectTimeout);
+        scream(String.format("SOCKET SIZE: %d", socket.getReceiveBufferSize()));
         return new PacketChannel(socket);
     }
 
