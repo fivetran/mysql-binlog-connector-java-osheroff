@@ -929,7 +929,6 @@ public class BinaryLogClientIntegrationTest {
                             };
                         }
                     };
-                    socket.setSendBufferSize(100000);
                     return socket;
                 }
             });

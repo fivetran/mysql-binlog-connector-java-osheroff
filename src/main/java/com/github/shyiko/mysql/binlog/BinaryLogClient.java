@@ -595,7 +595,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         socket.connect(new InetSocketAddress(hostname, port), (int) connectTimeout);
         scream("UPDATING SOCKET SEND BUFFER SIZE");
         socket.setSendBufferSize(43690 * 2);
-        scream(String.format("SOCKET SIZE: %d", socket.getReceiveBufferSize()));
+        scream(String.format("SOCKET SIZE: %d", socket.getSendBufferSize()));
         return new PacketChannel(socket);
     }
 
