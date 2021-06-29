@@ -94,6 +94,9 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private volatile long connectionId;
     private SSLMode sslMode = SSLMode.DISABLED;
 
+    private int sendBufferSize = 0;
+    private int receiveBufferSize = 0;
+
     private GtidSet gtidSet;
     private final Object gtidSetAccessLock = new Object();
     private boolean gtidSetFallbackToPurged;
@@ -594,9 +597,19 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         Socket socket = socketFactory != null ? socketFactory.createSocket() : new Socket();
         socket.connect(new InetSocketAddress(hostname, port), (int) connectTimeout);
         scream("UPDATING SOCKET SEND BUFFER SIZE");
-        socket.setSendBufferSize(43690 * 2);
-        scream(String.format("SOCKET SIZE: %d", socket.getSendBufferSize()));
+        socket.setSendBufferSize(socket.getSendBufferSize() * 2);
+        socket.setReceiveBufferSize(socket.getReceiveBufferSize() * 2);
+        scream(String.format("SEND SOCKET SIZE: %d", socket.getSendBufferSize()));
+        scream(String.format("RECEIVE SOCKET SIZE: %d", socket.getReceiveBufferSize()));
         return new PacketChannel(socket);
+    }
+
+    public void setSendBufferSize(int sendBufferSize) {
+        this.sendBufferSize = sendBufferSize;
+    }
+
+    public void setReceiveBufferSize(int receiveBufferSize) {
+        this.receiveBufferSize = receiveBufferSize;
     }
 
     private Callable<Void> scheduleCloseChannel(final PacketChannel channel, final long timeout) {
