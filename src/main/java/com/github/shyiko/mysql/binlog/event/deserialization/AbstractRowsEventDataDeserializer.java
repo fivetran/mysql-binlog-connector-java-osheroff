@@ -174,7 +174,7 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
             case TIMESTAMP_V2:
                 return deserializeTimestampV2(meta, inputStream);
             case DATETIME:
-                return deserializeDatetime(inputStream);
+//                return deserializeDatetime(inputStream);
             case DATETIME_V2:
                 return deserializeDatetimeV2(meta, inputStream);
             case YEAR:
