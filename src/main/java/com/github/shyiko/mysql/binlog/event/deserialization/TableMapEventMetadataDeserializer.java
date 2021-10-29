@@ -58,6 +58,9 @@ public class TableMapEventMetadataDeserializer {
                 continue;
             }
 
+            //for some reasons, the UNKNOWN_METADATA_FIELD_TYPE will mess up the stream
+            if(inputStream.available() == 0) return result;
+
             int fieldLength = inputStream.readPackedInteger();
 
             remainingBytes = inputStream.available();
