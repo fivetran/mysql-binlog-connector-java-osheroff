@@ -328,5 +328,5 @@ public class ByteArrayInputStream extends InputStream {
         }
         pos += (int) skipOf;
         return inputStream.skip(skipOf);
-     }
+    }
 }
