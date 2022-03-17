@@ -145,6 +145,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     private final List<EventListener> eventListeners = new CopyOnWriteArrayList<EventListener>();
     private final List<LifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<LifecycleListener>();
+    protected boolean abortRequest = false;
 
     private SocketFactory socketFactory;
     private SSLSocketFactory sslSocketFactory;
@@ -924,7 +925,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         eventDeserializer.setChecksumType(checksumType);
     }
 
-    private void listenForEventPackets() throws IOException {
+    protected void listenForEventPackets() throws IOException {
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         try {
