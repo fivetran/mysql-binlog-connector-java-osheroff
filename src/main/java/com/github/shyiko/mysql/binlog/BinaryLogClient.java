@@ -1029,6 +1029,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     protected void listenForEventPackets() throws IOException {
+        abortRequest = false;
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         try {
