@@ -930,7 +930,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         try {
-            while (inputStream.peek() != -1) {
+            while (!abortRequest && inputStream.peek() != -1) {
                 int packetLength = inputStream.readInteger(3);
                 inputStream.skip(1); // 1 byte for sequence
                 int marker = inputStream.read();
@@ -977,6 +977,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 }
             }
         } finally {
+            abortRequest = false;
             if (isConnected()) {
                 if (completeShutdown) {
                     disconnect(); // initiate complete shutdown sequence (which includes keep alive thread)
@@ -1170,6 +1171,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     public void disconnect() throws IOException {
         terminateKeepAliveThread();
         terminateConnect();
+    }
+
+    public void abort() {
+        abortRequest = true;
     }
 
     private void terminateKeepAliveThread() {
