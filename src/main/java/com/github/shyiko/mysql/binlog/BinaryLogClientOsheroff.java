@@ -45,9 +45,6 @@ import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.Packet;
 import com.github.shyiko.mysql.binlog.network.protocol.PacketChannel;
 import com.github.shyiko.mysql.binlog.network.protocol.ResultSetRowPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateNativePasswordCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSHA2Command;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSecurityPasswordCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.Command;
 import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogGtidCommand;
@@ -89,7 +86,7 @@ import javax.net.ssl.X509TrustManager;
  *
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
-public class BinaryLogClient implements BinaryLogClientMXBean {
+public class BinaryLogClientOsheroff implements BinaryLogClientMXBean {
 
     private static final SSLSocketFactory DEFAULT_REQUIRED_SSL_MODE_SOCKET_FACTORY = new DefaultSSLSocketFactory() {
 
@@ -171,34 +168,34 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     /**
      * Alias for BinaryLogClient("localhost", 3306, &lt;no schema&gt; = null, username, password).
-     * @see BinaryLogClient#BinaryLogClient(String, int, String, String, String)
+     * @see BinaryLogClientOsheroff#BinaryLogClientOsheroff(String, int, String, String, String)
 	 * @param username login name
 	 * @param password password
      */
-    public BinaryLogClient(String username, String password) {
+    public BinaryLogClientOsheroff(String username, String password) {
         this("localhost", 3306, null, username, password);
     }
 
     /**
      * Alias for BinaryLogClient("localhost", 3306, schema, username, password).
-     * @see BinaryLogClient#BinaryLogClient(String, int, String, String, String)
+     * @see BinaryLogClientOsheroff#BinaryLogClientOsheroff(String, int, String, String, String)
 	 * @param schema database name, nullable
 	 * @param username login name
 	 * @param password password
      */
-    public BinaryLogClient(String schema, String username, String password) {
+    public BinaryLogClientOsheroff(String schema, String username, String password) {
         this("localhost", 3306, schema, username, password);
     }
 
     /**
      * Alias for BinaryLogClient(hostname, port, &lt;no schema&gt; = null, username, password).
-     * @see BinaryLogClient#BinaryLogClient(String, int, String, String, String)
+     * @see BinaryLogClientOsheroff#BinaryLogClientOsheroff(String, int, String, String, String)
 	 * @param hostname mysql server hostname
      * @param port mysql server port
 	 * @param username login name
 	 * @param password password
      */
-    public BinaryLogClient(String hostname, int port, String username, String password) {
+    public BinaryLogClientOsheroff(String hostname, int port, String username, String password) {
         this(hostname, port, null, username, password);
     }
 
@@ -210,7 +207,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
      * @param username login name
      * @param password password
      */
-    public BinaryLogClient(String hostname, int port, String schema, String username, String password) {
+    public BinaryLogClientOsheroff(String hostname, int port, String schema, String username, String password) {
         this.hostname = hostname;
         this.port = port;
         this.schema = schema;
@@ -632,7 +629,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     private Callable scheduleDisconnectIn(final long timeout) {
-        final BinaryLogClient self = this;
+        final BinaryLogClientOsheroff self = this;
         final CountDownLatch connectLatch = new CountDownLatch(1);
         final Thread thread = newNamedThread(new Runnable() {
             @Override
@@ -841,7 +838,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         AbstractLifecycleListener connectListener = new AbstractLifecycleListener() {
             @Override
-            public void onConnect(BinaryLogClient client) {
+            public void onConnect(BinaryLogClientOsheroff client) {
                 countDownLatch.countDown();
             }
         };
@@ -1229,7 +1226,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     /**
-     * {@link BinaryLogClient}'s event listener.
+     * {@link BinaryLogClientOsheroff}'s event listener.
      */
     public interface EventListener {
 
@@ -1237,7 +1234,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     /**
-     * {@link BinaryLogClient}'s lifecycle listener.
+     * {@link BinaryLogClientOsheroff}'s lifecycle listener.
      */
     public interface LifecycleListener {
 
@@ -1245,15 +1242,15 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
          * Called once client has successfully logged in but before started to receive binlog events.
 		 * @param client the client that logged in
          */
-        void onConnect(BinaryLogClient client);
+        void onConnect(BinaryLogClientOsheroff client);
 
         /**
-         * It's guarantied to be called before {@link #onDisconnect(BinaryLogClient)}) in case of
+         * It's guarantied to be called before {@link #onDisconnect(BinaryLogClientOsheroff)}) in case of
          * communication failure.
 		 * @param client the client that triggered the communication failure
 		 * @param ex The exception that triggered the communication failutre
          */
-        void onCommunicationFailure(BinaryLogClient client, Exception ex);
+        void onCommunicationFailure(BinaryLogClientOsheroff client, Exception ex);
 
         /**
          * Called in case of failed event deserialization. Note this type of error does NOT cause client to
@@ -1261,13 +1258,13 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 		 * @param client the client that failed event deserialization
 		 * @param ex The exception that triggered the failutre
          */
-        void onEventDeserializationFailure(BinaryLogClient client, Exception ex);
+        void onEventDeserializationFailure(BinaryLogClientOsheroff client, Exception ex);
 
         /**
          * Called upon disconnect (regardless of the reason).
 		 * @param client the client that disconnected
          */
-        void onDisconnect(BinaryLogClient client);
+        void onDisconnect(BinaryLogClientOsheroff client);
     }
 
     /**
@@ -1275,13 +1272,13 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
      */
     public static abstract class AbstractLifecycleListener implements LifecycleListener {
 
-        public void onConnect(BinaryLogClient client) { }
+        public void onConnect(BinaryLogClientOsheroff client) { }
 
-        public void onCommunicationFailure(BinaryLogClient client, Exception ex) { }
+        public void onCommunicationFailure(BinaryLogClientOsheroff client, Exception ex) { }
 
-        public void onEventDeserializationFailure(BinaryLogClient client, Exception ex) { }
+        public void onEventDeserializationFailure(BinaryLogClientOsheroff client, Exception ex) { }
 
-        public void onDisconnect(BinaryLogClient client) { }
+        public void onDisconnect(BinaryLogClientOsheroff client) { }
 
     }
 

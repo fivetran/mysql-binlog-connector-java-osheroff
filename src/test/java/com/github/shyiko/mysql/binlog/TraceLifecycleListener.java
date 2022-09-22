@@ -21,33 +21,33 @@ import java.util.logging.Logger;
 /**
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
-public class TraceLifecycleListener implements BinaryLogClient.LifecycleListener {
+public class TraceLifecycleListener implements BinaryLogClientOsheroff.LifecycleListener {
 
     private final Logger logger = Logger.getLogger("donkey");
 
     @Override
-    public void onConnect(BinaryLogClient client) {
+    public void onConnect(BinaryLogClientOsheroff client) {
         if (logger.isLoggable(Level.INFO)) {
             logger.log(Level.INFO, "Connected");
         }
     }
 
     @Override
-    public void onCommunicationFailure(BinaryLogClient client, Exception ex) {
+    public void onCommunicationFailure(BinaryLogClientOsheroff client, Exception ex) {
         if (logger.isLoggable(Level.SEVERE)) {
             logger.log(Level.SEVERE, "Communication failed", ex);
         }
     }
 
     @Override
-    public void onEventDeserializationFailure(BinaryLogClient client, Exception ex) {
+    public void onEventDeserializationFailure(BinaryLogClientOsheroff client, Exception ex) {
         if (logger.isLoggable(Level.SEVERE)) {
             logger.log(Level.SEVERE, "Event deserialization failed", ex);
         }
     }
 
     @Override
-    public void onDisconnect(BinaryLogClient client) {
+    public void onDisconnect(BinaryLogClientOsheroff client) {
         if (logger.isLoggable(Level.INFO)) {
             logger.log(Level.INFO, "Disconnected");
         }

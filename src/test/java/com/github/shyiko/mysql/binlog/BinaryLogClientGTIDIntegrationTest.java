@@ -19,8 +19,6 @@ import com.github.shyiko.mysql.binlog.event.QueryEventData;
 import com.github.shyiko.mysql.binlog.event.XidEventData;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer;
 import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.sql.ResultSet;
@@ -78,7 +76,7 @@ public class BinaryLogClientGTIDIntegrationTest extends BinaryLogClientIntegrati
         EventDeserializer eventDeserializer = new EventDeserializer();
         try {
             client.disconnect();
-            final BinaryLogClient clientWithKeepAlive = new BinaryLogClient(slave.hostname(), slave.port(),
+            final BinaryLogClientOsheroff clientWithKeepAlive = new BinaryLogClientOsheroff(slave.hostname(), slave.port(),
                 slave.username(), slave.password());
 
             clientWithKeepAlive.setGtidSet(initialGTIDSet[0]);

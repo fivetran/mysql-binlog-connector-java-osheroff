@@ -35,7 +35,6 @@ import com.github.shyiko.mysql.binlog.network.AuthenticationException;
 import com.github.shyiko.mysql.binlog.network.SSLMode;
 import com.github.shyiko.mysql.binlog.network.ServerException;
 import com.github.shyiko.mysql.binlog.network.SocketFactory;
-import com.mysql.cj.MysqlConnection;
 import org.mockito.InOrder;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
@@ -110,7 +109,7 @@ public class BinaryLogClientIntegrationTest {
     private final TimeZone timeZoneBeforeTheTest = TimeZone.getDefault();
 
     protected MySQLConnection master, slave;
-    protected BinaryLogClient client;
+    protected BinaryLogClientOsheroff client;
     protected CountDownEventListener eventListener;
     protected MysqlVersion mysqlVersion;
 
@@ -134,7 +133,7 @@ public class BinaryLogClientIntegrationTest {
         master = new MySQLConnection("127.0.0.1", masterServer.getPort(), "root", "");
         slave = new MySQLConnection("127.0.0.1", slaveServer.getPort(), "root", "");
 
-        client = new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
+        client = new BinaryLogClientOsheroff(slave.hostname, slave.port, slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.CHAR_AND_BINARY_AS_BYTE_ARRAY,
             CompatibilityMode.DATE_AND_TIME_AS_LONG);
@@ -409,7 +408,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testDeserializationOfDateAndTimeAsLong() throws Exception {
-        final BinaryLogClient client = new BinaryLogClient(slave.hostname, slave.port,
+        final BinaryLogClientOsheroff client = new BinaryLogClientOsheroff(slave.hostname, slave.port,
             slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.DATE_AND_TIME_AS_LONG);
@@ -425,7 +424,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testDeserializationOfIntegerAsByteArray() throws Exception {
-        final BinaryLogClient client = new BinaryLogClient(slave.hostname, slave.port,
+        final BinaryLogClientOsheroff client = new BinaryLogClientOsheroff(slave.hostname, slave.port,
             slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.INTEGER_AS_BYTE_ARRAY);
@@ -470,7 +469,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testDeserializationOfDateAndTimeAsLongMicrosecondsPrecision() throws Exception {
-        final BinaryLogClient client = new BinaryLogClient(slave.hostname, slave.port,
+        final BinaryLogClientOsheroff client = new BinaryLogClientOsheroff(slave.hostname, slave.port,
             slave.username, slave.password);
         EventDeserializer eventDeserializer = new EventDeserializer();
         eventDeserializer.setCompatibilityMode(CompatibilityMode.DATE_AND_TIME_AS_LONG_MICRO);
@@ -509,8 +508,8 @@ public class BinaryLogClientIntegrationTest {
         return writeAndCaptureRow(client, columnDefinition, values);
     }
 
-    private Serializable[] writeAndCaptureRow(BinaryLogClient client, final String columnDefinition,
-            final String... values) throws Exception {
+    private Serializable[] writeAndCaptureRow(BinaryLogClientOsheroff client, final String columnDefinition,
+                                              final String... values) throws Exception {
         CapturingEventListener capturingEventListener = new CapturingEventListener();
         client.registerEventListener(capturingEventListener);
         CountDownEventListener eventListener = new CountDownEventListener();
@@ -549,7 +548,7 @@ public class BinaryLogClientIntegrationTest {
     @Test
     public void testBinlogPositionPointsToTableMapEventUntilTheEndOfLogicalGroup() throws Exception {
         final AtomicReference<Map.Entry<String, Long>> markHolder = new AtomicReference<Map.Entry<String, Long>>();
-        BinaryLogClient.EventListener markEventListener = new BinaryLogClient.EventListener() {
+        BinaryLogClientOsheroff.EventListener markEventListener = new BinaryLogClientOsheroff.EventListener() {
 
             private int counter;
 
@@ -573,7 +572,7 @@ public class BinaryLogClientIntegrationTest {
                 }
             });
             eventListener.waitFor(WriteRowsEventData.class, 3, DEFAULT_TIMEOUT);
-            final BinaryLogClient anotherClient = new BinaryLogClient(slave.hostname, slave.port,
+            final BinaryLogClientOsheroff anotherClient = new BinaryLogClientOsheroff(slave.hostname, slave.port,
                 slave.username, slave.password);
             anotherClient.registerLifecycleListener(new TraceLifecycleListener());
             CountDownEventListener anotherClientEventListener = new CountDownEventListener();
@@ -595,7 +594,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test(enabled = false)
     public void testUnsupportedColumnTypeDoesNotCauseClientToFail() throws Exception {
-        BinaryLogClient.LifecycleListener lifecycleListenerMock = mock(BinaryLogClient.LifecycleListener.class);
+        BinaryLogClientOsheroff.LifecycleListener lifecycleListenerMock = mock(BinaryLogClientOsheroff.LifecycleListener.class);
         client.registerLifecycleListener(lifecycleListenerMock);
         try {
             master.execute(new Callback<Statement>() {
@@ -718,7 +717,7 @@ public class BinaryLogClientIntegrationTest {
             bindInSeparateThread(tcpReverseProxy);
             try {
                 client.disconnect();
-                final BinaryLogClient clientOverProxy = new BinaryLogClient(slave.hostname, tcpReverseProxy.getPort(),
+                final BinaryLogClientOsheroff clientOverProxy = new BinaryLogClientOsheroff(slave.hostname, tcpReverseProxy.getPort(),
                         slave.username, slave.password);
                 clientOverProxy.setKeepAliveInterval(TimeUnit.MILLISECONDS.toMillis(100));
                 clientOverProxy.setKeepAliveConnectTimeout(TimeUnit.SECONDS.toMillis(2));
@@ -727,8 +726,8 @@ public class BinaryLogClientIntegrationTest {
                     clientOverProxy.connect(DEFAULT_TIMEOUT);
                     eventListener.waitFor(EventType.FORMAT_DESCRIPTION, 1, DEFAULT_TIMEOUT);
                     assertTrue(clientOverProxy.isKeepAliveThreadRunning());
-                    BinaryLogClient.LifecycleListener lifecycleListenerMock =
-                        mock(BinaryLogClient.LifecycleListener.class);
+                    BinaryLogClientOsheroff.LifecycleListener lifecycleListenerMock =
+                        mock(BinaryLogClientOsheroff.LifecycleListener.class);
                     clientOverProxy.registerLifecycleListener(lifecycleListenerMock);
                     TimeUnit.MILLISECONDS.sleep(300); // giving keep-alive-thread a chance to run few iterations
                     tcpReverseProxy.unbind();
@@ -798,7 +797,7 @@ public class BinaryLogClientIntegrationTest {
     protected void testCommunicationFailure(EventDeserializer eventDeserializer) throws Exception {
         try {
             client.disconnect();
-            final BinaryLogClient clientWithKeepAlive = new BinaryLogClient(slave.hostname, slave.port,
+            final BinaryLogClientOsheroff clientWithKeepAlive = new BinaryLogClientOsheroff(slave.hostname, slave.port,
                     slave.username, slave.password);
             clientWithKeepAlive.setKeepAliveInterval(TimeUnit.MILLISECONDS.toMillis(100));
             clientWithKeepAlive.setKeepAliveConnectTimeout(TimeUnit.SECONDS.toMillis(2));
@@ -808,8 +807,8 @@ public class BinaryLogClientIntegrationTest {
                 eventListener.reset();
                 clientWithKeepAlive.connect(DEFAULT_TIMEOUT);
                 eventListener.waitFor(EventType.FORMAT_DESCRIPTION, 1, DEFAULT_TIMEOUT);
-                BinaryLogClient.LifecycleListener lifecycleListenerMock =
-                        mock(BinaryLogClient.LifecycleListener.class);
+                BinaryLogClientOsheroff.LifecycleListener lifecycleListenerMock =
+                        mock(BinaryLogClientOsheroff.LifecycleListener.class);
                 clientWithKeepAlive.registerLifecycleListener(lifecycleListenerMock);
                 master.execute(new Callback<Statement>() {
                     @Override
@@ -836,7 +835,7 @@ public class BinaryLogClientIntegrationTest {
     public void testCustomEventDataDeserializers() throws Exception {
         try {
             client.disconnect();
-            final BinaryLogClient binaryLogClient = new BinaryLogClient(slave.hostname, slave.port,
+            final BinaryLogClientOsheroff binaryLogClient = new BinaryLogClientOsheroff(slave.hostname, slave.port,
                     slave.username, slave.password);
             binaryLogClient.registerEventListener(new TraceEventListener());
             binaryLogClient.registerEventListener(eventListener);
@@ -888,8 +887,8 @@ public class BinaryLogClientIntegrationTest {
 
     @Test
     public void testExceptionIsThrownWhenProvidedWithWrongCredentials() throws Exception {
-        BinaryLogClient binaryLogClient =
-            new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password + "^_^");
+        BinaryLogClientOsheroff binaryLogClient =
+            new BinaryLogClientOsheroff(slave.hostname, slave.port, slave.username, slave.password + "^_^");
         try {
             binaryLogClient.connect();
             fail("Wrong password should have resulted in AuthenticationException being thrown");
@@ -905,7 +904,7 @@ public class BinaryLogClientIntegrationTest {
         String slaveUsername = bundle.getString(prefix + "slave.slaveUsername");
         String slavePassword = bundle.getString(prefix + "slave.slavePassword");
 
-        new BinaryLogClient(slave.hostname, slave.port, slaveUsername, slavePassword).connect();
+        new BinaryLogClientOsheroff(slave.hostname, slave.port, slaveUsername, slavePassword).connect();
     }
 
     private void bindInSeparateThread(final TCPReverseProxy tcpReverseProxy) throws InterruptedException {
@@ -925,7 +924,7 @@ public class BinaryLogClientIntegrationTest {
 
     @Test(expectedExceptions = AuthenticationException.class)
     public void testAuthenticationFailsWhenNonExistingSchemaProvided() throws Exception {
-        new BinaryLogClient(slave.hostname, slave.port, "mbcj_test_non_existing", slave.username, slave.password).
+        new BinaryLogClientOsheroff(slave.hostname, slave.port, "mbcj_test_non_existing", slave.username, slave.password).
             connect(DEFAULT_TIMEOUT);
     }
 
@@ -941,8 +940,8 @@ public class BinaryLogClientIntegrationTest {
             }
         });
         eventListener.waitFor(QueryEventData.class, 4, DEFAULT_TIMEOUT);
-        BinaryLogClient isolatedClient =
-            new BinaryLogClient(slave.hostname, slave.port, "mbcj_test_isolated", slave.username, slave.password);
+        BinaryLogClientOsheroff isolatedClient =
+            new BinaryLogClientOsheroff(slave.hostname, slave.port, "mbcj_test_isolated", slave.username, slave.password);
         try {
             CountDownEventListener isolatedEventListener = new CountDownEventListener();
             isolatedClient.registerEventListener(isolatedEventListener);
@@ -967,8 +966,8 @@ public class BinaryLogClientIntegrationTest {
         // a more reliable way would be to use buffered 2-level concurrent filter input stream
         try {
             client.disconnect();
-            final BinaryLogClient binaryLogClient =
-                new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
+            final BinaryLogClientOsheroff binaryLogClient =
+                new BinaryLogClientOsheroff(slave.hostname, slave.port, slave.username, slave.password);
             final Lock inputStreamLock = new ReentrantLock();
             final AtomicBoolean breakOutputStream = new AtomicBoolean();
             binaryLogClient.setSocketFactory(new SocketFactory() {
@@ -1032,10 +1031,10 @@ public class BinaryLogClientIntegrationTest {
                 });
                 // trigger reconnect
                 final CountDownLatch reconnect = new CountDownLatch(1);
-                binaryLogClient.registerLifecycleListener(new BinaryLogClient.AbstractLifecycleListener() {
+                binaryLogClient.registerLifecycleListener(new BinaryLogClientOsheroff.AbstractLifecycleListener() {
 
                     @Override
-                    public void onConnect(BinaryLogClient client) {
+                    public void onConnect(BinaryLogClientOsheroff client) {
                         reconnect.countDown();
                     }
                 });
@@ -1071,7 +1070,7 @@ public class BinaryLogClientIntegrationTest {
         if ( !mysqlVersion.atLeast(8, 0) )
             throw new SkipException("skipping mysql8 auth test");
 
-        BinaryLogClient client = new BinaryLogClient(master.hostname, master.port, "mysql8", "testpass");
+        BinaryLogClientOsheroff client = new BinaryLogClientOsheroff(master.hostname, master.port, "mysql8", "testpass");
         client.setSSLMode(SSLMode.PREFERRED);
         client.connect(DEFAULT_TIMEOUT);
     }
@@ -1081,7 +1080,7 @@ public class BinaryLogClientIntegrationTest {
         if ( !mysqlVersion.atLeast(8, 0) )
             throw new SkipException("skipping mysql8 auth test");
 
-        BinaryLogClient client = new BinaryLogClient(master.hostname, master.port, "mysql8", "testpass");
+        BinaryLogClientOsheroff client = new BinaryLogClientOsheroff(master.hostname, master.port, "mysql8", "testpass");
         client.setSSLMode(SSLMode.PREFERRED);
         client.connect(DEFAULT_TIMEOUT);
 
@@ -1105,7 +1104,7 @@ public class BinaryLogClientIntegrationTest {
         MySQLConnection cx = new MySQLConnection("127.0.0.1", server.getPort(), "root", "");
 
         setupMysql8Login(cx);
-        BinaryLogClient c = new BinaryLogClient(cx.hostname, cx.port, "mysql8", "testpass");
+        BinaryLogClientOsheroff c = new BinaryLogClientOsheroff(cx.hostname, cx.port, "mysql8", "testpass");
         c.setSSLMode(SSLMode.PREFERRED);
         c.connect(DEFAULT_TIMEOUT);
 
@@ -1117,7 +1116,7 @@ public class BinaryLogClientIntegrationTest {
         if ( !mysqlVersion.atLeast(8, 0) )
             throw new SkipException("skipping mysql8 auth test");
 
-        BinaryLogClient client = new BinaryLogClient(master.hostname, master.port, "mysql8", "testpass");
+        BinaryLogClientOsheroff client = new BinaryLogClientOsheroff(master.hostname, master.port, "mysql8", "testpass");
         client.connect(DEFAULT_TIMEOUT);
     }
 
@@ -1161,7 +1160,7 @@ public class BinaryLogClientIntegrationTest {
     public void afterEachTest() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final String markerQuery = "drop table if exists _EOS_marker";
-        BinaryLogClient.EventListener markerInterceptor = new BinaryLogClient.EventListener() {
+        BinaryLogClientOsheroff.EventListener markerInterceptor = new BinaryLogClientOsheroff.EventListener() {
             @Override
             public void onEvent(Event event) {
                 if (event.getHeader().getEventType() == EventType.QUERY) {
