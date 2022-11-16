@@ -202,7 +202,7 @@ public enum EventType {
      * Generated when 'binlog_transaction_compression' is set to 'ON'.
      * It encapsulates all the events of a transaction in a Zstd compressed payload.
      */
-    TRANSACTION_PAYLOAD(40);
+    TRANSACTION_PAYLOAD(40),
 
     /**
      * MariaDB Support Events
@@ -222,7 +222,7 @@ public enum EventType {
 
     /**
      * Parses the event type based on the ordinal.
-     * 
+     *
      * <p>If an invalid or proprietary ordinal is passed, EventType.UNKNOWN is returned.
      */
     public static EventType forId(int eventId) {
@@ -259,7 +259,7 @@ public enum EventType {
 
     public static EventType byEventNumber(int num) {
         for (EventType type : EventType.values()) {
-            if (type.eventNumber == num) {
+            if (type.eventId == num) {
                 return type;
             }
         }
