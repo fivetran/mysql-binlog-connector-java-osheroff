@@ -145,7 +145,7 @@ public class MariadbGtidSet extends GtidSet {
 
                 MariaGtid thisGtid = thisDomainMap.get(serverID);
                 MariaGtid otherGtid = otherDomainMap.get(serverID);
-                if ( thisGtid.sequence >= otherGtid.sequence )
+                if ( thisGtid.sequence > otherGtid.sequence )
                     return false;
             }
         }
