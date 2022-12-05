@@ -16,9 +16,9 @@
 package com.github.shyiko.mysql.binlog.event;
 
 /**
+ * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  * @see <a href="https://dev.mysql.com/doc/internals/en/event-meanings.html">Event Meanings</a> for the original
  * documentation.
- * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
 public enum EventType {
 
@@ -202,7 +202,17 @@ public enum EventType {
      * Generated when 'binlog_transaction_compression' is set to 'ON'.
      * It encapsulates all the events of a transaction in a Zstd compressed payload.
      */
-    TRANSACTION_PAYLOAD(40);
+    TRANSACTION_PAYLOAD(40),
+
+    /**
+     * MariaDB Support Events
+     *
+     * @see <a href="https://mariadb.com/kb/en/replication-protocol/">Replication Protocol</a> for the original doc.
+     */
+    ANNOTATE_ROWS(160), //
+    BINLOG_CHECKPOINT(161),
+    MARIADB_GTID(162),
+    MARIADB_GTID_LIST(163);
 
     private final int eventId;
 
@@ -212,7 +222,7 @@ public enum EventType {
 
     /**
      * Parses the event type based on the ordinal.
-     * 
+     *
      * <p>If an invalid or proprietary ordinal is passed, EventType.UNKNOWN is returned.
      */
     public static EventType forId(int eventId) {
@@ -225,26 +235,34 @@ public enum EventType {
 
     public static boolean isRowMutation(EventType eventType) {
         return EventType.isWrite(eventType) ||
-               EventType.isUpdate(eventType) ||
-               EventType.isDelete(eventType);
+            EventType.isUpdate(eventType) ||
+            EventType.isDelete(eventType);
     }
 
     public static boolean isWrite(EventType eventType) {
         return eventType == PRE_GA_WRITE_ROWS ||
-               eventType == WRITE_ROWS ||
-               eventType == EXT_WRITE_ROWS;
+            eventType == WRITE_ROWS ||
+            eventType == EXT_WRITE_ROWS;
     }
 
     public static boolean isUpdate(EventType eventType) {
         return eventType == PRE_GA_UPDATE_ROWS ||
-               eventType == UPDATE_ROWS ||
-               eventType == EXT_UPDATE_ROWS;
+            eventType == UPDATE_ROWS ||
+            eventType == EXT_UPDATE_ROWS;
     }
 
     public static boolean isDelete(EventType eventType) {
         return eventType == PRE_GA_DELETE_ROWS ||
-               eventType == DELETE_ROWS ||
-               eventType == EXT_DELETE_ROWS;
+            eventType == DELETE_ROWS ||
+            eventType == EXT_DELETE_ROWS;
     }
 
+    public static EventType byEventNumber(int num) {
+        for (EventType type : EventType.values()) {
+            if (type.eventId == num) {
+                return type;
+            }
+        }
+        return null;
+    }
 }

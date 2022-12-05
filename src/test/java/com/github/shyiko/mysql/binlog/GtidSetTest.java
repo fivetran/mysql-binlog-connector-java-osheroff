@@ -164,4 +164,5 @@ public class GtidSetTest {
         assertEquals(gtidSet, gtidSet2);
     }
 
+
 }

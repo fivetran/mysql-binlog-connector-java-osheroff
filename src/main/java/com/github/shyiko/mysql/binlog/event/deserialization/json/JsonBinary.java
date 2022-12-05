@@ -162,11 +162,21 @@ public class JsonBinary {
      * @throws IOException if there is a problem reading or processing the binary representation
      */
     public static String parseAsString(byte[] bytes) throws IOException {
+        /* check for mariaDB-format JSON strings inside columns marked JSON */
+        if ( isJSONString(bytes) ) {
+            return new String(bytes);
+        }
         JsonStringFormatter handler = new JsonStringFormatter();
         parse(bytes, handler);
         return handler.getString();
     }
 
+    private static boolean isJSONString(byte[] bytes) {
+        if (bytes[0] > 0x0f)
+            return true;
+        else
+            return false;
+    }
     /**
      * Parse the MySQL binary representation of a {@code JSON} value and call the supplied {@link JsonFormatter}
      * for the various components of the value.

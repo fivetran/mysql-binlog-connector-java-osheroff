@@ -26,15 +26,13 @@ jobs:
         type: string
     environment:
       MYSQL_VERSION: "<< parameters.mysql >>"
-      JAVA_TOOL_OPTIONS: "-Xmx250m"
+      JAVA_TOOL_OPTIONS: "-Xmx250m -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
     steps:
       - checkout
       - restore_cache:
           key: dependency-cache-{{ checksum "pom.xml" }}
       - run:
-          command: echo "testing under mysql $MYSQL_VERSION"
-      - run:
-          name: testit
+          name: "testing under version << parameters.mysql >>"
           command: mvn verify -Dgpg.skip
       - store_artifacts:
           path: test.log
@@ -55,5 +53,9 @@ workflows:
       - test:
           name: "test-8.0"
           mysql: "8.0"
+          requires: [ "build" ]
+      - test:
+          name: "test-mariadb"
+          mysql: "mariadb"
           requires: [ "build" ]
 

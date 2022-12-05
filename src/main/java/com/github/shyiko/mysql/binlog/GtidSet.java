@@ -40,6 +40,13 @@ public class GtidSet {
 
     private final Map<String, UUIDSet> map = new LinkedHashMap<String, UUIDSet>();
 
+    public static GtidSet parse(String gtidStr) {
+        if ( MariadbGtidSet.isMariaGtidSet(gtidStr) ) {
+            return new MariadbGtidSet(gtidStr);
+        } else {
+            return new GtidSet(gtidStr);
+        }
+    }
     /**
      * @param gtidSet gtid set comprised of closed intervals (like MySQL's executed_gtid_set).
      */
@@ -158,6 +165,10 @@ public class GtidSet {
             gtids.add(uuidSet.getUUID() + ":" + join(uuidSet.intervals, ":"));
         }
         return join(gtids, ",");
+    }
+
+    public String toSeenString() {
+        return this.toString();
     }
 
     private static String join(Collection<?> o, String delimiter) {
