@@ -132,6 +132,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private final String password;
 
     private boolean blocking = true;
+    private boolean stopReadAtEndOfLogs = false;
     private long serverId = 65535;
     private volatile String binlogFilename;
     private volatile long binlogPosition = 4;
@@ -151,6 +152,12 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private final List<EventListener> eventListeners = new CopyOnWriteArrayList<EventListener>();
     private final List<LifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<LifecycleListener>();
     protected boolean abortRequest = false;
+
+    public boolean isLogsExhausted() {
+        return logsExhausted;
+    }
+
+    protected boolean logsExhausted = false;
 
     private SocketFactory socketFactory;
     private SSLSocketFactory sslSocketFactory;
@@ -275,6 +282,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     public void setServerId(long serverId) {
         this.serverId = serverId;
     }
+
+
 
     /**
      * @return binary log filename, nullable (and null be default). Note that this value is automatically tracked by
@@ -1036,8 +1045,9 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         abortRequest = false;
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
+
         try {
-            while (!abortRequest && inputStream.peek() != -1) {
+            while (!abortRequest && inputStream.peek() != -1 && !logsExhausted) {
                 int packetLength = inputStream.readInteger(3);
                 inputStream.skip(1); // 1 byte for sequence
                 int marker = inputStream.read();
@@ -1075,6 +1085,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                     updateGtidSet(event);
                     notifyEventListeners(event);
                     updateClientBinlogFilenameAndPosition(event);
+                }
+
+                if (stopReadAtEndOfLogs && inputStream.peek() == -1) {
+                    logsExhausted = true;
                 }
             }
         } catch (Exception e) {
@@ -1351,6 +1365,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         if (channel != null && channel.isOpen()) {
             channel.close();
         }
+    }
+
+    public void setStopReadAtEndOfLogs(boolean stopReadAtEndOfLogs) {
+        this.stopReadAtEndOfLogs = stopReadAtEndOfLogs;
     }
 
     /**
