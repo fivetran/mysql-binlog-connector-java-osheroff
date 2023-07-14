@@ -35,16 +35,13 @@ import com.github.shyiko.mysql.binlog.network.AuthenticationException;
 import com.github.shyiko.mysql.binlog.network.SSLMode;
 import com.github.shyiko.mysql.binlog.network.ServerException;
 import com.github.shyiko.mysql.binlog.network.SocketFactory;
-import com.mysql.cj.MysqlConnection;
 import org.mockito.InOrder;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
@@ -56,8 +53,6 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.net.Socket;
 import java.net.SocketException;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
@@ -97,7 +92,7 @@ import static org.testng.Assert.fail;
 /**
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
  */
-public class BinaryLogClientIntegrationTest {
+public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
 
     protected static final long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(3);
 
@@ -109,58 +104,6 @@ public class BinaryLogClientIntegrationTest {
 
     private final TimeZone timeZoneBeforeTheTest = TimeZone.getDefault();
 
-    protected MySQLConnection master, slave;
-    protected BinaryLogClient client;
-    protected CountDownEventListener eventListener;
-    protected MysqlVersion mysqlVersion;
-
-    protected MysqlOnetimeServerOptions getOptions() {
-        MysqlOnetimeServerOptions options = new MysqlOnetimeServerOptions();
-        options.fullRowMetaData = true;
-        return options;
-    }
-
-    @BeforeClass
-    public void setUp() throws Exception {
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
-        mysqlVersion = MysqlOnetimeServer.getVersion();
-        MysqlOnetimeServer masterServer = new MysqlOnetimeServer(getOptions());
-        MysqlOnetimeServer slaveServer = new MysqlOnetimeServer(getOptions());
-
-        masterServer.boot();
-        slaveServer.boot();
-        slaveServer.setupSlave(masterServer.getPort());
-
-        master = new MySQLConnection("127.0.0.1", masterServer.getPort(), "root", "");
-        slave = new MySQLConnection("127.0.0.1", slaveServer.getPort(), "root", "");
-
-        client = new BinaryLogClient(slave.hostname, slave.port, slave.username, slave.password);
-        EventDeserializer eventDeserializer = new EventDeserializer();
-        eventDeserializer.setCompatibilityMode(CompatibilityMode.CHAR_AND_BINARY_AS_BYTE_ARRAY,
-            CompatibilityMode.DATE_AND_TIME_AS_LONG);
-        client.setEventDeserializer(eventDeserializer);
-        client.setServerId(client.getServerId() - 1); // avoid clashes between BinaryLogClient instances
-        client.setKeepAlive(false);
-        client.registerEventListener(new TraceEventListener());
-        client.registerEventListener(eventListener = new CountDownEventListener());
-        client.registerLifecycleListener(new TraceLifecycleListener());
-        client.connect(DEFAULT_TIMEOUT);
-        master.execute(new Callback<Statement>() {
-            @Override
-            public void execute(Statement statement) throws SQLException {
-                statement.execute("drop database if exists mbcj_test");
-                statement.execute("create database mbcj_test");
-                statement.execute("use mbcj_test");
-            }
-        });
-        eventListener.waitFor(EventType.QUERY, 2, DEFAULT_TIMEOUT);
-
-        if ( mysqlVersion.atLeast(8, 0) ) {
-            setupMysql8Login(master);
-            eventListener.waitFor(EventType.QUERY, 2, DEFAULT_TIMEOUT);
-        }
-    }
-
     @BeforeMethod
     public void beforeEachTest() throws Exception {
         master.execute(new Callback<Statement>() {
@@ -170,7 +113,7 @@ public class BinaryLogClientIntegrationTest {
                 statement.execute("create table bikini_bottom (name varchar(255) primary key)");
             }
         });
-        eventListener.waitFor(EventType.QUERY, 2, DEFAULT_TIMEOUT);
+        eventListener.waitForAtLeast(EventType.QUERY, 2, DEFAULT_TIMEOUT);
         eventListener.reset();
     }
 
@@ -863,7 +806,7 @@ public class BinaryLogClientIntegrationTest {
                         statement.execute("flush logs");
                     }
                 });
-                eventListener.waitFor(EventType.QUERY, 1, DEFAULT_TIMEOUT);
+                eventListener.waitForAtLeast(EventType.QUERY, 1, DEFAULT_TIMEOUT);
                 eventListener.waitFor(EventType.ROTATE, 3, DEFAULT_TIMEOUT); /* 2 with timestamp 0 */
                 eventListener.waitFor(ByteArrayEventData.class, 5, DEFAULT_TIMEOUT);
             } finally {
@@ -1061,11 +1004,6 @@ public class BinaryLogClientIntegrationTest {
         }
     }
 
-    private void setupMysql8Login(MySQLConnection server) throws Exception {
-        server.execute("create user 'mysql8' IDENTIFIED WITH caching_sha2_password BY 'testpass'");
-        server.execute("grant replication slave, replication client on *.* to 'mysql8'");
-    }
-
     @Test
     public void testMysql8Auth() throws Exception {
         if ( !mysqlVersion.atLeast(8, 0) )
@@ -1204,114 +1142,6 @@ public class BinaryLogClientIntegrationTest {
                 });
                 master.close();
             }
-        }
-    }
-
-    /**
-     * Representation of a MySQL connection.
-     */
-    public static final class MySQLConnection implements Closeable {
-
-        private final String hostname;
-        private final int port;
-        private final String username;
-        private final String password;
-        private Connection connection;
-
-        public MySQLConnection(String hostname, int port, String username, String password)
-            throws ClassNotFoundException, SQLException {
-            this.hostname = hostname;
-            this.port = port;
-            this.username = username;
-            this.password = password;
-            Class.forName("com.mysql.jdbc.Driver");
-            connect();
-        }
-
-        private void connect() throws SQLException {
-            this.connection = DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port +
-                "?serverTimezone=UTC", username, password);
-            execute(new Callback<Statement>() {
-
-                @Override
-                public void execute(Statement statement) throws SQLException {
-                    statement.execute("SET time_zone = '+00:00'");
-                }
-            });
-        }
-
-        public String hostname() {
-            return hostname;
-        }
-
-        public int port() {
-            return port;
-        }
-
-        public String username() {
-            return username;
-        }
-
-        public String password() {
-            return password;
-        }
-
-        public void execute(Callback<Statement> callback, boolean autocommit) throws SQLException {
-            connection.setAutoCommit(autocommit);
-            Statement statement = connection.createStatement();
-            try {
-                callback.execute(statement);
-                if (!autocommit) {
-                    connection.commit();
-                }
-            } finally {
-                statement.close();
-            }
-        }
-
-        public void execute(Callback<Statement> callback) throws SQLException {
-            execute(callback, false);
-        }
-
-        public void execute(final String...statements) throws SQLException {
-            execute(new Callback<Statement>() {
-                @Override
-                public void execute(Statement statement) throws SQLException {
-                    for (String command : statements) {
-                        statement.execute(command);
-                    }
-                }
-            });
-        }
-
-        public void query(String sql, Callback<ResultSet> callback) throws SQLException {
-            connection.setAutoCommit(false);
-            Statement statement = connection.createStatement();
-            try {
-                ResultSet rs = statement.executeQuery(sql);
-                try {
-                    callback.execute(rs);
-                    connection.commit();
-                } finally {
-                    rs.close();
-                }
-            } finally {
-                statement.close();
-            }
-        }
-
-        @Override
-        public void close() throws IOException {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                throw new IOException(e);
-            }
-        }
-
-        public void reconnect() throws IOException, SQLException {
-            close();
-            connect();
         }
     }
 
