@@ -195,13 +195,11 @@ public enum EventType {
      * Prepared XA transaction terminal event similar to XID except that it is specific to XA transaction.
      */
     XA_PREPARE(38),
-
     /**
      Extension of UPDATE_ROWS_EVENT, allowing partial values according
      to binlog_row_value_options.
      */
     PARTIAL_UPDATE_ROWS_EVENT(39),
-
     /**
      * Generated when 'binlog_transaction_compression' is set to 'ON'.
      * It encapsulates all the events of a transaction in a Zstd compressed payload.
