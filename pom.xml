@@ -4,7 +4,7 @@
 
     <groupId>com.zendesk</groupId>
     <artifactId>mysql-binlog-connector-java</artifactId>
-    <version>0.27.5</version>
+    <version>0.28.1-FIVETRAN</version>
 
     <name>mysql-binlog-connector-java</name>
     <description>MySQL Binary Log connector</description>
@@ -190,6 +190,13 @@
                 </executions>
             </plugin>
         </plugins>
+        <extensions>
+            <extension>
+                <groupId>org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE</version>
+            </extension>
+        </extensions>
     </build>
     <profiles>
         <profile>
@@ -205,4 +212,19 @@
         </profile>
     </profiles>
 
+    <!-- You need ~/.m2/settings.xml for aws-maven to work -->
+    <distributionManagement>
+        <repository>
+            <id>fivetran-maven-release</id>
+            <url>s3://fivetran-maven/public/release</url>
+        </repository>
+    </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>aws-public-release</id>
+            <name>AWS Public Release Repository</name>
+            <url>https://s3.amazonaws.com/fivetran-maven/public/release</url>
+        </repository>
+    </repositories>
 </project>

@@ -16,8 +16,10 @@
 package com.github.shyiko.mysql.binlog.event.deserialization;
 
 import com.github.shyiko.mysql.binlog.event.GtidEventData;
+import com.github.shyiko.mysql.binlog.event.MySqlGtid;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * @author <a href="mailto:pprasse@actindo.de">Patrick Prasse</a>
@@ -26,27 +28,25 @@ public class GtidEventDataDeserializer implements EventDataDeserializer<GtidEven
 
     @Override
     public GtidEventData deserialize(ByteArrayInputStream inputStream) throws IOException {
-        GtidEventData eventData = new GtidEventData();
         byte flags = (byte) inputStream.readInteger(1);
-        byte[] sid = inputStream.read(16);
-        long gno = inputStream.readLong(8);
-        eventData.setFlags(flags);
-        eventData.setGtid(byteArrayToHex(sid, 0, 4) + "-" +
-            byteArrayToHex(sid, 4, 2) + "-" +
-            byteArrayToHex(sid, 6, 2) + "-" +
-            byteArrayToHex(sid, 8, 2) + "-" +
-            byteArrayToHex(sid, 10, 6) + ":" +
-            String.format("%d", gno)
+        long sourceIdMostSignificantBits = readLongBigEndian(inputStream);
+        long sourceIdLeastSignificantBits = readLongBigEndian(inputStream);
+        long transactionId = inputStream.readLong(8);
+
+        return new GtidEventData(
+            new MySqlGtid(
+                new UUID(sourceIdMostSignificantBits, sourceIdLeastSignificantBits),
+                transactionId
+            ),
+            flags
         );
-        return eventData;
     }
 
-    private String byteArrayToHex(byte[] a, int offset, int len) {
-        StringBuilder sb = new StringBuilder();
-        for (int idx = offset; idx < (offset + len) && idx < a.length; idx++) {
-            sb.append(String.format("%02x", a[idx] & 0xff));
+    private static long readLongBigEndian(ByteArrayInputStream input) throws IOException {
+        long result = 0;
+        for (int i = 0; i < 8; ++i) {
+            result = ((result << 8) | (input.read() & 0xff));
         }
-        return sb.toString();
+        return result;
     }
-
 }

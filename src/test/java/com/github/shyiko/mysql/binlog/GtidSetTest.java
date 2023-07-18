@@ -17,6 +17,7 @@ package com.github.shyiko.mysql.binlog;
 
 import com.github.shyiko.mysql.binlog.GtidSet.Interval;
 import com.github.shyiko.mysql.binlog.GtidSet.UUIDSet;
+import com.github.shyiko.mysql.binlog.event.MySqlGtid;
 import org.testng.annotations.Test;
 
 import java.util.LinkedList;
@@ -164,5 +165,23 @@ public class GtidSetTest {
         assertEquals(gtidSet, gtidSet2);
     }
 
+    @Test
+    public void testAddStringGtid() {
+        GtidSet gtidSet = new GtidSet("00000000-0000-0000-0000-000000000000:1");
+        gtidSet.addGtid("00000000-0000-0000-0000-000000000000:2");
+        assertEquals("00000000-0000-0000-0000-000000000000:1-2", gtidSet.toString());
+    }
 
+    @Test
+    public void testAddMySqlGtid() {
+        GtidSet gtidSet = new GtidSet("00000000-0000-0000-0000-000000000000:1");
+        gtidSet.addGtid(MySqlGtid.fromString("00000000-0000-0000-0000-000000000000:2"));
+        assertEquals("00000000-0000-0000-0000-000000000000:1-2", gtidSet.toString());
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testAddAnotherObjectAsGtidFails() {
+        GtidSet gtidSet = new GtidSet("");
+        gtidSet.addGtid(MariadbGtidSet.MariaGtid.parse("1-2-3"));
+    }
 }

@@ -21,8 +21,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.*;
 
 /**
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
@@ -69,5 +68,16 @@ public class EventTypeTest {
         for (EventType eventType : eventTypes) {
             assertFalse(EventType.isDelete(eventType));
         }
+    }
+
+    @Test
+    public void testByEventNumber() {
+        assertEquals(EventType.byEventNumber(0), EventType.UNKNOWN);
+        assertNull(EventType.byEventNumber(-1));
+        assertNull(EventType.byEventNumber(41));
+        assertNull(EventType.byEventNumber(159));
+        assertNull(EventType.byEventNumber(164));
+        assertEquals(EventType.byEventNumber(1), EventType.START_V3);
+        assertEquals(EventType.byEventNumber(163), EventType.MARIADB_GTID_LIST);
     }
 }

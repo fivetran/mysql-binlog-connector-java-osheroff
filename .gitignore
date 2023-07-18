@@ -1,4 +1,4 @@
-.idea
+*.idea
 *.iml
 .DS_Store
 target
@@ -7,3 +7,4 @@ target
 .settings
 .vagrant
 .*.sw*
+target/

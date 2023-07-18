@@ -1,5 +1,7 @@
 package com.github.shyiko.mysql.binlog;
 
+import com.github.shyiko.mysql.binlog.event.MySqlGtid;
+
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -111,6 +113,16 @@ public class MariadbGtidSet extends GtidSet {
         MariaGtid mariaGtid = MariaGtid.parse(gtid);
         add(mariaGtid);
         return true;
+    }
+
+    public void addGtid(Object gtid) {
+        if (gtid instanceof MariaGtid) {
+            add((MariaGtid) gtid);
+        } else if (gtid instanceof String) {
+            add((String) gtid);
+        } else {
+            throw new IllegalArgumentException(gtid + " not supported");
+        }
     }
 
     public void add(MariaGtid gtid) {

@@ -58,6 +58,12 @@ public class TableMapEventMetadataDeserializer {
                 continue;
             }
 
+            //for some reasons, the UNKNOWN_METADATA_FIELD_TYPE will mess up the stream
+            if(inputStream.available() == 0) {
+                logger.warning("Stream is empty so cannot read field length for field type: " + fieldType);
+                return result;
+            }
+
             int fieldLength = inputStream.readPackedInteger();
 
             remainingBytes = inputStream.available();
@@ -96,6 +102,7 @@ public class TableMapEventMetadataDeserializer {
                     break;
                 case ENUM_AND_SET_COLUMN_CHARSET:
                     result.setEnumAndSetColumnCharsets(readIntegers(inputStream));
+                    break;
                 case VISIBILITY:
                     result.setVisibility(readBooleanList(inputStream, nColumns));
                     break;

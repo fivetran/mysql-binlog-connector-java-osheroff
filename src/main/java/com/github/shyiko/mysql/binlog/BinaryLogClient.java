@@ -46,7 +46,6 @@ import com.github.shyiko.mysql.binlog.network.SSLMode;
 import com.github.shyiko.mysql.binlog.network.SSLSocketFactory;
 import com.github.shyiko.mysql.binlog.network.ServerException;
 import com.github.shyiko.mysql.binlog.network.SocketFactory;
-import com.github.shyiko.mysql.binlog.network.TLSHostnameVerifier;
 import com.github.shyiko.mysql.binlog.network.protocol.ErrorPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.Packet;
@@ -58,10 +57,6 @@ import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogGtid
 import com.github.shyiko.mysql.binlog.network.protocol.command.PingCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.QueryCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.SSLRequestCommand;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -88,6 +83,10 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 
 /**
  * MySQL replication stream client.
@@ -124,7 +123,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     // https://dev.mysql.com/doc/internals/en/sending-more-than-16mbyte.html
     private static final int MAX_PACKET_LENGTH = 16777215;
 
-    private final Logger logger = Logger.getLogger(getClass().getName());
+    private final Logger logger = Logger.getLogger("donkey");
 
     private final String hostname;
     private final int port;
@@ -144,13 +143,14 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private boolean gtidSetFallbackToPurged;
     private boolean gtidEnabled = false;
     private boolean useBinlogFilenamePositionInGtidMode;
-    protected String gtid;
+    protected Object gtid;
     private boolean tx;
 
     private EventDeserializer eventDeserializer = new EventDeserializer();
 
     private final List<EventListener> eventListeners = new CopyOnWriteArrayList<EventListener>();
     private final List<LifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<LifecycleListener>();
+    protected boolean abortRequest = false;
 
     private SocketFactory socketFactory;
     private SSLSocketFactory sslSocketFactory;
@@ -225,6 +225,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         this.schema = schema;
         this.username = username;
         this.password = password;
+    }
+
+    public String fivetranClientIdentity() {
+        return "mysql-binlog-connector-java-osheroff";
     }
 
     public boolean isBlocking() {
@@ -740,8 +744,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                         sslMode == SSLMode.REQUIRED || sslMode == SSLMode.PREFERRED ?
                             DEFAULT_REQUIRED_SSL_MODE_SOCKET_FACTORY :
                             DEFAULT_VERIFY_CA_SSL_MODE_SOCKET_FACTORY;
-                channel.upgradeToSSL(sslSocketFactory,
-                    sslMode == SSLMode.VERIFY_IDENTITY ? new TLSHostnameVerifier() : null);
+                channel.upgradeToSSL(sslSocketFactory, null);
                 logger.info("SSL enabled");
                 return true;
             }
@@ -1013,7 +1016,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         binlogPosition = Long.parseLong(resultSetRow.getValue(1));
     }
 
-    private ChecksumType fetchBinlogChecksum() throws IOException {
+    protected ChecksumType fetchBinlogChecksum() throws IOException {
         channel.write(new QueryCommand("show global variables like 'binlog_checksum'"));
         ResultSetRowPacket[] resultSet = readResultSet();
         if (resultSet.length == 0) {
@@ -1029,11 +1032,12 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         eventDeserializer.setChecksumType(checksumType);
     }
 
-    private void listenForEventPackets() throws IOException {
+    protected void listenForEventPackets() throws IOException {
+        abortRequest = false;
         ByteArrayInputStream inputStream = channel.getInputStream();
         boolean completeShutdown = false;
         try {
-            while (inputStream.peek() != -1) {
+            while (!abortRequest && inputStream.peek() != -1) {
                 int packetLength = inputStream.readInteger(3);
                 inputStream.skip(1); // 1 byte for sequence
                 int marker = inputStream.read();
@@ -1080,6 +1084,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 }
             }
         } finally {
+            abortRequest = false;
             if (isConnected()) {
                 if (completeShutdown) {
                     disconnect(); // initiate complete shutdown sequence (which includes keep alive thread)
@@ -1131,7 +1136,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         switch(eventHeader.getEventType()) {
             case GTID:
                 GtidEventData gtidEventData = (GtidEventData) EventDataWrapper.internal(event.getData());
-                gtid = gtidEventData.getGtid();
+                gtid = gtidEventData.getMySqlGtid();
                 break;
             case XID:
                 commitGtid();
@@ -1183,12 +1188,12 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private void commitGtid() {
         if (gtid != null) {
             synchronized (gtidSetAccessLock) {
-                gtidSet.add(gtid);
+                gtidSet.addGtid(gtid);
             }
         }
     }
 
-    private ResultSetRowPacket[] readResultSet() throws IOException {
+    protected ResultSetRowPacket[] readResultSet() throws IOException {
         List<ResultSetRowPacket> resultSet = new LinkedList<>();
         byte[] statementResult = channel.read();
         checkError(statementResult);
@@ -1245,9 +1250,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             try {
                 eventListener.onEvent(event);
             } catch (Exception e) {
-                if (logger.isLoggable(Level.WARNING)) {
-                    logger.log(Level.WARNING, eventListener + " choked on " + event, e);
-                }
+                throw new RuntimeException("Binlog event listener " + eventListener +
+                    " choked on " + event, e);
             }
         }
     }
@@ -1296,6 +1300,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     public void disconnect() throws IOException {
         terminateKeepAliveThread();
         terminateConnect();
+    }
+
+    public void abort() {
+        abortRequest = true;
     }
 
     private void terminateKeepAliveThread() {
