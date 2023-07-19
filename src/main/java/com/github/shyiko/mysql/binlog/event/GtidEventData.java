@@ -22,21 +22,37 @@ public class GtidEventData implements EventData {
 
     public static final byte COMMIT_FLAG = 1;
 
-    private String gtid;
+    private MySqlGtid gtid;
     private byte flags;
 
-    public String getGtid() {
-        return gtid;
+    @Deprecated
+    public GtidEventData() {
     }
 
-    public void setGtid(String gtid) {
+    public GtidEventData(MySqlGtid gtid, byte flags) {
         this.gtid = gtid;
+        this.flags = flags;
+    }
+
+    @Deprecated
+    public String getGtid() {
+        return gtid.toString();
+    }
+
+    @Deprecated
+    public void setGtid(String gtid) {
+        this.gtid = MySqlGtid.fromString(gtid);
+    }
+
+    public MySqlGtid getMySqlGtid() {
+        return gtid;
     }
 
     public byte getFlags() {
         return flags;
     }
 
+    @Deprecated
     public void setFlags(byte flags) {
         this.flags = flags;
     }

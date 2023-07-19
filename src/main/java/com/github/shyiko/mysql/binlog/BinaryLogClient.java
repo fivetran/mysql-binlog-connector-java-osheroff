@@ -15,19 +15,25 @@
  */
 package com.github.shyiko.mysql.binlog;
 
+import com.github.shyiko.mysql.binlog.event.AnnotateRowsEventData;
 import com.github.shyiko.mysql.binlog.event.Event;
 import com.github.shyiko.mysql.binlog.event.EventHeader;
 import com.github.shyiko.mysql.binlog.event.EventHeaderV4;
 import com.github.shyiko.mysql.binlog.event.EventType;
 import com.github.shyiko.mysql.binlog.event.GtidEventData;
+import com.github.shyiko.mysql.binlog.event.MariadbGtidEventData;
+import com.github.shyiko.mysql.binlog.event.MariadbGtidListEventData;
 import com.github.shyiko.mysql.binlog.event.QueryEventData;
 import com.github.shyiko.mysql.binlog.event.RotateEventData;
+import com.github.shyiko.mysql.binlog.event.deserialization.AnnotateRowsEventDataDeserializer;
 import com.github.shyiko.mysql.binlog.event.deserialization.ChecksumType;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDataDeserializationException;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDataDeserializer;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer.EventDataWrapper;
 import com.github.shyiko.mysql.binlog.event.deserialization.GtidEventDataDeserializer;
+import com.github.shyiko.mysql.binlog.event.deserialization.MariadbGtidEventDataDeserializer;
+import com.github.shyiko.mysql.binlog.event.deserialization.MariadbGtidListEventDataDeserializer;
 import com.github.shyiko.mysql.binlog.event.deserialization.QueryEventDataDeserializer;
 import com.github.shyiko.mysql.binlog.event.deserialization.RotateEventDataDeserializer;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
@@ -45,9 +51,6 @@ import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.Packet;
 import com.github.shyiko.mysql.binlog.network.protocol.PacketChannel;
 import com.github.shyiko.mysql.binlog.network.protocol.ResultSetRowPacket;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateNativePasswordCommand;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSHA2Command;
-import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSecurityPasswordCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.Command;
 import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.DumpBinaryLogGtidCommand;
@@ -66,6 +69,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -134,11 +138,12 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     private volatile long connectionId;
     private SSLMode sslMode = SSLMode.DISABLED;
 
-    private GtidSet gtidSet;
-    private final Object gtidSetAccessLock = new Object();
+    protected GtidSet gtidSet;
+    protected final Object gtidSetAccessLock = new Object();
     private boolean gtidSetFallbackToPurged;
+    private boolean gtidEnabled = false;
     private boolean useBinlogFilenamePositionInGtidMode;
-    private String gtid;
+    protected Object gtid;
     private boolean tx;
 
     private EventDeserializer eventDeserializer = new EventDeserializer();
@@ -168,6 +173,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
     private final Lock connectLock = new ReentrantLock();
     private final Lock keepAliveThreadExecutorLock = new ReentrantLock();
+    private boolean useSendAnnotateRowsEvent;
+
+
+    private Boolean isMariaDB;
 
     /**
      * Alias for BinaryLogClient("localhost", 3306, &lt;no schema&gt; = null, username, password).
@@ -325,7 +334,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
     }
 
     /**
-     * @param gtidSet GTID set (can be an empty string).
+     * @param gtidStr GTID set string (can be an empty string).
      * <p>NOTE #1: Any value but null will switch BinaryLogClient into a GTID mode (this will also set binlogFilename
      * to "" (provided it's null) forcing MySQL to send events starting from the oldest known binlog (keep in mind
      * that connection will fail if gtid_purged is anything but empty (unless
@@ -334,12 +343,24 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
      * @see #getGtidSet()
      * @see #setGtidSetFallbackToPurged(boolean)
      */
-    public void setGtidSet(String gtidSet) {
-        if (gtidSet != null && this.binlogFilename == null) {
+    public void setGtidSet(String gtidStr) {
+        if ( gtidStr == null )
+            return;
+
+        this.gtidEnabled = true;
+
+        if (this.binlogFilename == null) {
             this.binlogFilename = "";
         }
+
         synchronized (gtidSetAccessLock) {
-            this.gtidSet = gtidSet != null ? new GtidSet(gtidSet) : null;
+            if ( !gtidStr.equals("") ) {
+                if ( MariadbGtidSet.isMariaGtidSet(gtidStr) ) {
+                    this.gtidSet = new MariadbGtidSet(gtidStr);
+                } else {
+                    this.gtidSet = new GtidSet(gtidStr);
+                }
+            }
         }
     }
 
@@ -505,6 +526,21 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         this.threadFactory = threadFactory;
     }
 
+
+    /**
+     * @return true/false depending on whether we've connected to MariaDB.  NULL if not connected.
+     */
+    public Boolean getMariaDB() {
+        return isMariaDB;
+    }
+
+    public boolean isUseSendAnnotateRowsEvent() {
+        return useSendAnnotateRowsEvent;
+    }
+
+    public void setUseSendAnnotateRowsEvent(boolean useSendAnnotateRowsEvent) {
+        this.useSendAnnotateRowsEvent = useSendAnnotateRowsEvent;
+    }
     /**
      * Connect to the replication stream. Note that this method blocks until disconnected.
      * @throws AuthenticationException if authentication fails
@@ -536,6 +572,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 }
                 GreetingPacket greetingPacket = receiveGreeting();
 
+                detectMariaDB(greetingPacket);
                 tryUpgradeToSSL(greetingPacket);
 
                 new Authenticator(greetingPacket, channel, schema, username, password).authenticate();
@@ -543,11 +580,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
 
                 connectionId = greetingPacket.getThreadId();
                 if ("".equals(binlogFilename)) {
-                    synchronized (gtidSetAccessLock) {
-                        if (gtidSet != null && "".equals(gtidSet.toString()) && gtidSetFallbackToPurged) {
-                            gtidSet = new GtidSet(fetchGtidPurged());
-                        }
-                    }
+                    setupGtidSet();
                 }
                 if (binlogFilename == null) {
                     fetchBinlogFilenameAndPosition();
@@ -595,9 +628,8 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
             }
             ensureEventDataDeserializer(EventType.ROTATE, RotateEventDataDeserializer.class);
             synchronized (gtidSetAccessLock) {
-                if (gtidSet != null) {
-                    ensureEventDataDeserializer(EventType.GTID, GtidEventDataDeserializer.class);
-                    ensureEventDataDeserializer(EventType.QUERY, QueryEventDataDeserializer.class);
+                if (this.gtidEnabled) {
+                    ensureGtidEventDataDeserializer();
                 }
             }
             listenForEventPackets();
@@ -611,6 +643,13 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
+    private void detectMariaDB(GreetingPacket packet) {
+        String serverVersion = packet.getServerVersion();
+        if ( serverVersion == null )
+            return;
+
+        this.isMariaDB = serverVersion.toLowerCase().contains("mariadb");
+    }
     /**
      * Apply additional options for connection before requesting binlog stream.
      */
@@ -670,7 +709,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         };
     }
 
-    private void checkError(byte[] packet) throws IOException {
+    protected void checkError(byte[] packet) throws IOException {
         if (packet[0] == (byte) 0xFF /* error */) {
             byte[] bytes = Arrays.copyOfRange(packet, 1, packet.length);
             ErrorPacket errorPacket = new ErrorPacket(bytes);
@@ -713,7 +752,6 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         return false;
     }
 
-
     private void enableHeartbeat() throws IOException {
         channel.write(new QueryCommand("set @master_heartbeat_period=" + heartbeatInterval * 1000000));
         byte[] statementResult = channel.read();
@@ -728,11 +766,18 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
-    private void requestBinaryLogStream() throws IOException {
+    protected void requestBinaryLogStream() throws IOException {
         long serverId = blocking ? this.serverId : 0; // http://bugs.mysql.com/bug.php?id=71178
+        if ( this.isMariaDB )
+            requestBinaryLogStreamMaria(serverId);
+        else
+            requestBinaryLogStreamMysql(serverId);
+    }
+
+    private void requestBinaryLogStreamMysql(long serverId) throws IOException {
         Command dumpBinaryLogCommand;
         synchronized (gtidSetAccessLock) {
-            if (gtidSet != null) {
+            if (this.gtidEnabled) {
                 dumpBinaryLogCommand = new DumpBinaryLogGtidCommand(serverId,
                     useBinlogFilenamePositionInGtidMode ? binlogFilename : "",
                     useBinlogFilenamePositionInGtidMode ? binlogPosition : 4,
@@ -744,7 +789,33 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         channel.write(dumpBinaryLogCommand);
     }
 
-    private void ensureEventDataDeserializer(EventType eventType,
+    protected void requestBinaryLogStreamMaria(long serverId) throws IOException {
+        Command dumpBinaryLogCommand;
+
+        /*
+            https://jira.mariadb.org/browse/MDEV-225
+         */
+        channel.write(new QueryCommand("SET @mariadb_slave_capability=4"));
+        checkError(channel.read());
+
+        synchronized (gtidSetAccessLock) {
+            if (this.gtidEnabled) {
+                logger.info(gtidSet.toString());
+                channel.write(new QueryCommand("SET @slave_connect_state = '" + gtidSet.toString() + "'"));
+                checkError(channel.read());
+                channel.write(new QueryCommand("SET @slave_gtid_strict_mode = 0"));
+                checkError(channel.read());
+                channel.write(new QueryCommand("SET @slave_gtid_ignore_duplicates = 0"));
+                checkError(channel.read());
+                dumpBinaryLogCommand = new DumpBinaryLogCommand(serverId, "", 0L, isUseSendAnnotateRowsEvent());
+            } else {
+                dumpBinaryLogCommand = new DumpBinaryLogCommand(serverId, binlogFilename, binlogPosition, isUseSendAnnotateRowsEvent());
+            }
+        }
+        channel.write(dumpBinaryLogCommand);
+    }
+
+    protected void ensureEventDataDeserializer(EventType eventType,
              Class<? extends EventDataDeserializer> eventDataDeserializerClass) {
         EventDataDeserializer eventDataDeserializer = eventDeserializer.getEventDataDeserializer(eventType);
         if (eventDataDeserializer.getClass() != eventDataDeserializerClass &&
@@ -759,6 +830,14 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 new EventDataWrapper.Deserializer(internalEventDataDeserializer,
                     eventDataDeserializer));
         }
+    }
+
+    protected void ensureGtidEventDataDeserializer() {
+        ensureEventDataDeserializer(EventType.GTID, GtidEventDataDeserializer.class);
+        ensureEventDataDeserializer(EventType.QUERY, QueryEventDataDeserializer.class);
+        ensureEventDataDeserializer(EventType.ANNOTATE_ROWS, AnnotateRowsEventDataDeserializer.class);
+        ensureEventDataDeserializer(EventType.MARIADB_GTID, MariadbGtidEventDataDeserializer.class);
+        ensureEventDataDeserializer(EventType.MARIADB_GTID_LIST, MariadbGtidListEventDataDeserializer.class);
     }
 
     private void spawnKeepAliveThread() {
@@ -901,6 +980,30 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         return "";
     }
 
+    protected void setupGtidSet() throws IOException{
+        if (!this.gtidEnabled)
+            return;
+
+        synchronized (gtidSetAccessLock) {
+            if ( this.isMariaDB ) {
+                if ( gtidSet == null ) {
+                    gtidSet = new MariadbGtidSet("");
+                } else if ( !(gtidSet instanceof MariadbGtidSet) ) {
+                    throw new RuntimeException("Connected to MariaDB but given a mysql GTID set!");
+                }
+            } else {
+                if ( gtidSet == null && gtidSetFallbackToPurged ) {
+                    gtidSet = new GtidSet(fetchGtidPurged());
+                } else if ( gtidSet == null ){
+                    gtidSet = new GtidSet("");
+                } else if ( gtidSet instanceof MariadbGtidSet ) {
+                    throw new RuntimeException("Connected to Mysql but given a MariaDB GTID set!");
+                }
+            }
+        }
+
+    }
+
     private void fetchBinlogFilenameAndPosition() throws IOException {
         ResultSetRowPacket[] resultSet;
         channel.write(new QueryCommand("show master status"));
@@ -1023,7 +1126,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         }
     }
 
-    private void updateGtidSet(Event event) {
+    protected void updateGtidSet(Event event) {
         synchronized (gtidSetAccessLock) {
             if (gtidSet == null) {
                 return;
@@ -1033,7 +1136,7 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         switch(eventHeader.getEventType()) {
             case GTID:
                 GtidEventData gtidEventData = (GtidEventData) EventDataWrapper.internal(event.getData());
-                gtid = gtidEventData.getGtid();
+                gtid = gtidEventData.getMySqlGtid();
                 break;
             case XID:
                 commitGtid();
@@ -1045,25 +1148,47 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 if (sql == null) {
                     break;
                 }
-                if ("BEGIN".equals(sql)) {
-                    tx = true;
-                } else
-                if ("COMMIT".equals(sql) || "ROLLBACK".equals(sql)) {
-                    commitGtid();
-                    tx = false;
-                } else
-                if (!tx) {
-                    // auto-commit query, likely DDL
-                    commitGtid();
+                commitGtid(sql);
+                break;
+            case ANNOTATE_ROWS:
+                AnnotateRowsEventData annotateRowsEventData = (AnnotateRowsEventData) EventDeserializer.EventDataWrapper.internal(event.getData());
+                sql = annotateRowsEventData.getRowsQuery();
+                if (sql == null) {
+                    break;
                 }
+                commitGtid(sql);
+                break;
+            case MARIADB_GTID:
+                MariadbGtidEventData mariadbGtidEventData = (MariadbGtidEventData) EventDeserializer.EventDataWrapper.internal(event.getData());
+                mariadbGtidEventData.setServerId(eventHeader.getServerId());
+                gtid = mariadbGtidEventData.toString();
+                break;
+            case MARIADB_GTID_LIST:
+                MariadbGtidListEventData mariadbGtidListEventData = (MariadbGtidListEventData) EventDeserializer.EventDataWrapper.internal(event.getData());
+                gtid = mariadbGtidListEventData.getMariaGTIDSet().toString();
+                break;
             default:
+        }
+    }
+
+    protected void commitGtid(String sql) {
+        if ("BEGIN".equals(sql)) {
+            tx = true;
+        } else
+        if ("COMMIT".equals(sql) || "ROLLBACK".equals(sql)) {
+            commitGtid();
+            tx = false;
+        } else
+        if (!tx) {
+            // auto-commit query, likely DDL
+            commitGtid();
         }
     }
 
     private void commitGtid() {
         if (gtid != null) {
             synchronized (gtidSetAccessLock) {
-                gtidSet.add(gtid);
+                gtidSet.addGtid(gtid);
             }
         }
     }

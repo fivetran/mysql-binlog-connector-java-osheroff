@@ -37,4 +37,9 @@ public class EventHeaderV4Deserializer implements EventHeaderDeserializer<EventH
         header.setFlags(inputStream.readInteger(2));
         return header;
     }
+
+    private static EventType getEventType(int ordinal) {
+        EventType eventType = EventType.byEventNumber(ordinal);
+        return eventType == null ? EventType.UNKNOWN : eventType;
+    }
 }

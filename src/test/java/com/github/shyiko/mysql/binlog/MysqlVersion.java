@@ -5,12 +5,14 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 
 public class MysqlVersion {
+    public boolean isMaria;
 	private final int major;
 	private final int minor;
 
-	public MysqlVersion(int major, int minor) {
+	public MysqlVersion(int major, int minor, boolean isMaria) {
 		this.major = major;
 		this.minor = minor;
+        this.isMaria = isMaria;
 	}
 
 	public boolean atLeast(int major, int minor) {
@@ -27,7 +29,7 @@ public class MysqlVersion {
 
 	public static MysqlVersion capture(Connection c) throws SQLException {
 		DatabaseMetaData meta = c.getMetaData();
-		return new MysqlVersion(meta.getDatabaseMajorVersion(), meta.getDatabaseMinorVersion());
+		return new MysqlVersion(meta.getDatabaseMajorVersion(), meta.getDatabaseMinorVersion(), false);
 	}
 
 	public int getMajor() {

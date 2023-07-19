@@ -26,8 +26,8 @@ import java.util.BitSet;
 public class ByteArrayInputStream extends InputStream {
 
     private InputStream inputStream;
-    private Integer peek;
-    private Integer pos, markPosition;
+    private int peek = -1;
+    private int pos, markPosition;
     private int blockLength = -1;
     private int initialBlockLength = -1;
 
@@ -194,7 +194,7 @@ public class ByteArrayInputStream extends InputStream {
     }
 
     public int peek() throws IOException {
-        if (peek == null) {
+        if (peek == -1) {
             peek = readWithinBlockBoundaries();
         }
         return peek;
@@ -203,11 +203,11 @@ public class ByteArrayInputStream extends InputStream {
     @Override
     public int read() throws IOException {
         int result;
-        if (peek == null) {
+        if (peek == -1) {
             result = readWithinBlockBoundaries();
         } else {
             result = peek;
-            peek = null;
+            peek = -1;
         }
         if (result == -1) {
             throw new EOFException(String.format("Failed to read next byte from position %d", this.pos));
@@ -236,8 +236,8 @@ public class ByteArrayInputStream extends InputStream {
             return 0;
         }
 
-        if (peek != null) {
-            b[off] = (byte)(int)peek;
+        if (peek != -1) {
+            b[off] = (byte) peek;
             off += 1;
             len -= 1;
         }
@@ -248,8 +248,8 @@ public class ByteArrayInputStream extends InputStream {
             this.pos += read;
         }
 
-        if (peek != null) {
-            peek = null;
+        if (peek != -1) {
+            peek = -1;
             read = read <= 0 ? 1 : read + 1;
         }
 

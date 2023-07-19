@@ -19,6 +19,7 @@ import com.github.shyiko.mysql.binlog.BinaryLogClient;
 import com.github.shyiko.mysql.binlog.BinaryLogClientIntegrationTest;
 import com.github.shyiko.mysql.binlog.CapturingEventListener;
 import com.github.shyiko.mysql.binlog.CountDownEventListener;
+import com.github.shyiko.mysql.binlog.MySQLConnection;
 import com.github.shyiko.mysql.binlog.MysqlOnetimeServer;
 import com.github.shyiko.mysql.binlog.TraceEventListener;
 import com.github.shyiko.mysql.binlog.TraceLifecycleListener;
@@ -28,11 +29,13 @@ import com.github.shyiko.mysql.binlog.event.QueryEventData;
 import com.github.shyiko.mysql.binlog.event.UpdateRowsEventData;
 import com.github.shyiko.mysql.binlog.event.WriteRowsEventData;
 import org.skyscreamer.jsonassert.JSONAssert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -63,9 +66,11 @@ public class JsonBinaryValueIntegrationTest {
 
     private final TimeZone timeZoneBeforeTheTest = TimeZone.getDefault();
 
-    private BinaryLogClientIntegrationTest.MySQLConnection master;
+    private MySQLConnection master;
     private BinaryLogClient client;
     private CountDownEventListener eventListener;
+
+    private boolean isMaria = "mariadb".equals(System.getenv("MYSQL_VERSION"));
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -74,7 +79,7 @@ public class JsonBinaryValueIntegrationTest {
         MysqlOnetimeServer masterServer = new MysqlOnetimeServer();
         masterServer.boot();
 
-        master = new BinaryLogClientIntegrationTest.MySQLConnection("127.0.0.1", masterServer.getPort(), "root", "");
+        master = new MySQLConnection("127.0.0.1", masterServer.getPort(), "root", "");
 
         client = new BinaryLogClient(master.hostname(), master.port(), master.username(), master.password());
         client.setServerId(client.getServerId() - 1); // avoid clashes between BinaryLogClient instances
@@ -103,8 +108,13 @@ public class JsonBinaryValueIntegrationTest {
             System.err.println("skipping JSON tests (pre 5.7)");
             throw new org.testng.SkipException("JSON data type is not supported by current version of MySQL");
         }
-        eventListener.waitFor(EventType.QUERY, 3, DEFAULT_TIMEOUT);
+        eventListener.waitForAtLeast(EventType.QUERY, 3, DEFAULT_TIMEOUT);
         eventListener.reset();
+    }
+
+    private String parseAndRemoveSpaces(byte[] jsonBinary) throws IOException {
+        String parsed = JsonBinary.parseAsString(jsonBinary);
+        return parsed.replaceAll(" ", "");
     }
 
     @Test
@@ -123,7 +133,7 @@ public class JsonBinaryValueIntegrationTest {
 
         List<UpdateRowsEventData> updateEvents = capturingEventListener.getEvents(UpdateRowsEventData.class);
         Serializable[] updateData = updateEvents.iterator().next().getRows().get(0).getValue();
-        assertEquals(JsonBinary.parseAsString((byte[]) updateData[0]), json.replace("970785C8-C299", "970785C8"));
+        assertEquals(parseAndRemoveSpaces((byte[]) updateData[0]), json.replace("970785C8-C299", "970785C8"));
     }
 
     @Test
@@ -142,7 +152,7 @@ public class JsonBinaryValueIntegrationTest {
 
         List<UpdateRowsEventData> updateEvents = capturingEventListener.getEvents(UpdateRowsEventData.class);
         Serializable[] updateData = updateEvents.iterator().next().getRows().get(0).getValue();
-        assertEquals(JsonBinary.parseAsString((byte[]) updateData[0]), json.replace("\"ab\":\"970785C8-C299\"", ""));
+        assertEquals(parseAndRemoveSpaces((byte[]) updateData[0]), json.replace("\"ab\":\"970785C8-C299\"", ""));
 
         client.unregisterEventListener(capturingEventListener);
     }
@@ -163,7 +173,7 @@ public class JsonBinaryValueIntegrationTest {
 
         List<UpdateRowsEventData> updateEvents = capturingEventListener.getEvents(UpdateRowsEventData.class);
         Serializable[] updateData = updateEvents.iterator().next().getRows().get(0).getValue();
-        assertEquals(JsonBinary.parseAsString((byte[]) updateData[0]), json.replace(
+        assertEquals(parseAndRemoveSpaces((byte[]) updateData[0]), json.replace(
                 "\"17fc9889474028063990914001f6854f6b8b5784\":\"test_field_for_remove_fields_behaviour_2\",", ""));
 
         client.unregisterEventListener(capturingEventListener);
@@ -185,7 +195,7 @@ public class JsonBinaryValueIntegrationTest {
 
         List<UpdateRowsEventData> updateEvents = capturingEventListener.getEvents(UpdateRowsEventData.class);
         Serializable[] updateData = updateEvents.iterator().next().getRows().get(0).getValue();
-        assertEquals(JsonBinary.parseAsString((byte[]) updateData[0]), json.replace("970785C8-C299", "9707"));
+        assertEquals(parseAndRemoveSpaces((byte[]) updateData[0]), json.replace("970785C8-C299", "9707"));
 
         client.unregisterEventListener(capturingEventListener);
     }
@@ -208,7 +218,9 @@ public class JsonBinaryValueIntegrationTest {
 
         List<UpdateRowsEventData> updateEvents = capturingEventListener.getEvents(UpdateRowsEventData.class);
         Serializable[] updateData = updateEvents.iterator().next().getRows().get(0).getValue();
-        assertEquals(JsonBinary.parseAsString((byte[]) updateData[0]), "[\"foo\",\"baz\"]");
+        String parsed = parseAndRemoveSpaces((byte[]) updateData[0]);
+
+        assertEquals(parsed, "[\"foo\",\"baz\"]");
 
         client.unregisterEventListener(capturingEventListener);
     }
@@ -450,12 +462,18 @@ public class JsonBinaryValueIntegrationTest {
 
     @Test
     public void testScalarDateTime() throws Exception {
+        if ( isMaria )
+            throw new SkipException("");
+
         assertEquals(writeAndCaptureJSON("CAST(CAST('2015-01-15 23:24:25' AS DATETIME) AS JSON)"),
             "\"2015-01-15 23:24:25\"");
     }
 
     @Test
     public void testScalarTime() throws Exception {
+        if ( isMaria )
+            throw new SkipException("");
+
         assertEquals(writeAndCaptureJSON("CAST(CAST('23:24:25' AS TIME) AS JSON)"),
             "\"23:24:25\"");
         assertEquals(writeAndCaptureJSON("CAST(CAST('23:24:25.12' AS TIME(3)) AS JSON)"),
@@ -466,12 +484,17 @@ public class JsonBinaryValueIntegrationTest {
 
     @Test
     public void testScalarDate() throws Exception {
+        if ( isMaria )
+            throw new SkipException("");
         assertEquals(writeAndCaptureJSON("CAST(CAST('2015-01-15' AS DATE) AS JSON)"),
             "\"2015-01-15\"");
     }
 
     @Test
     public void testScalarTimestamp() throws Exception {
+        if ( isMaria )
+            throw new SkipException("");
+
         // timestamp literals are interpreted by MySQL as DATETIME values
         assertEquals(writeAndCaptureJSON("CAST(TIMESTAMP'2015-01-15 23:24:25' AS JSON)"),
             "\"2015-01-15 23:24:25\"");
@@ -486,6 +509,9 @@ public class JsonBinaryValueIntegrationTest {
 
     @Test
     public void testScalarGeometry() throws Exception {
+        if ( isMaria )
+            throw new SkipException("");
+
         assertEquals(writeAndCaptureJSON("CAST(ST_GeomFromText('POINT(1 1)') AS JSON)"),
             "{\"type\":\"Point\",\"coordinates\":[1.0,1.0]}");
     }
@@ -497,6 +523,9 @@ public class JsonBinaryValueIntegrationTest {
 
     @Test
     public void testScalarBinaryAsBase64() throws Exception {
+        if ( isMaria )
+            throw new SkipException("");
+
         assertEquals(writeAndCaptureJSON("CAST(x'cafe' AS JSON)"), "\"yv4=\"");
         assertEquals(writeAndCaptureJSON("CAST(x'cafebabe' AS JSON)"), "\"yv66vg==\"");
     }
@@ -543,9 +572,13 @@ public class JsonBinaryValueIntegrationTest {
             System.out.println("I am about to fail an expectation...");
             assertTrue(false, "did not receive rows in json test for " + value);
         }
-        byte[] b = (byte[]) capturingEventListener.getEvents(WriteRowsEventData.class).get(0).getRows().get(0)[0];
+        WriteRowsEventData e = capturingEventListener.getEvents(WriteRowsEventData.class).get(0);
+        Serializable[] firstRow = e.getRows().get(0);
+
+        byte[] b = (byte[]) firstRow[0];
         return b == null ? null : JsonBinary.parseAsString(b);
     }
+
 
     @AfterMethod
     public void afterEachTest() throws Exception {

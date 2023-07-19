@@ -4,7 +4,7 @@
 
     <groupId>com.zendesk</groupId>
     <artifactId>mysql-binlog-connector-java</artifactId>
-    <version>0.7.3-4-FIVETRAN</version>
+    <version>0.28.1-FIVETRAN</version>
 
     <name>mysql-binlog-connector-java</name>
     <description>MySQL Binary Log connector</description>
@@ -68,13 +68,13 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.9.10</version>
+            <version>2.13.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.9.10.3</version>
+            <version>2.13.4.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -165,7 +165,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -227,5 +227,4 @@
             <url>https://s3.amazonaws.com/fivetran-maven/public/release</url>
         </repository>
     </repositories>
-
 </project>
