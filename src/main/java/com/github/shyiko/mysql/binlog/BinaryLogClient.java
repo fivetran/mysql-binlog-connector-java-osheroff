@@ -618,6 +618,11 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 setupConnection();
                 gtid = null;
                 tx = false;
+
+                for (LifecycleListener lifecycleListener : lifecycleListeners) {
+                    lifecycleListener.beforeConnect(this);
+                }
+
                 requestBinaryLogStream();
             } catch (IOException e) {
                 disconnectChannel();
@@ -1404,6 +1409,13 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
      * {@link BinaryLogClient}'s lifecycle listener.
      */
     public interface LifecycleListener {
+        /**
+         * Called once client has successfully logged in but before requested binlog events.
+         * @param client the client that logged in
+         */
+        default void beforeConnect(BinaryLogClient client) {
+            client.logger.info("No pre-streaming activity configured");
+        }
 
         /**
          * Called once client has successfully logged in but before started to receive binlog events.
