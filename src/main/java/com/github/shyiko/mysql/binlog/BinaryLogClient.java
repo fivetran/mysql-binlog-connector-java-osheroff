@@ -579,6 +579,11 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 channel.authenticationComplete();
 
                 connectionId = greetingPacket.getThreadId();
+
+                for (LifecycleListener lifecycleListener : lifecycleListeners) {
+                    lifecycleListener.beforeConnect(this);
+                }
+
                 if ("".equals(binlogFilename)) {
                     setupGtidSet();
                 }
@@ -594,10 +599,6 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
                 setupConnection();
                 gtid = null;
                 tx = false;
-
-                for (LifecycleListener lifecycleListener : lifecycleListeners) {
-                    lifecycleListener.beforeConnect(this);
-                }
 
                 requestBinaryLogStream();
             } catch (IOException e) {
