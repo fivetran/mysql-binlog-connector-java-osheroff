@@ -20,6 +20,8 @@ import com.github.shyiko.mysql.binlog.event.TableMapEventMetadata;
 import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author <a href="mailto:stanley.shyiko@gmail.com">Stanley Shyiko</a>
@@ -47,11 +49,33 @@ public class TableMapEventDataDeserializer implements EventDataDeserializer<Tabl
             metadata = metadataDeserializer.deserialize(
                 new ByteArrayInputStream(inputStream.read(metadataLength)),
                 eventData.getColumnTypes().length,
-                numericColumnCount(eventData.getColumnTypes())
+                eventData.getColumnTypes()
             );
         }
         eventData.setEventMetadata(metadata);
         return eventData;
+    }
+
+    private List<Integer> numericColumnIndex(byte[] types) {
+        List<Integer> numericColumnIndexList = new ArrayList<>();
+        for (int i = 0; i < types.length; i++) {
+            switch (ColumnType.byCode(types[i] & 0xff)) {
+                case TINY:
+                case SHORT:
+                case INT24:
+                case LONG:
+                case LONGLONG:
+                case NEWDECIMAL:
+                case FLOAT:
+                case DOUBLE:
+                case YEAR:
+                    numericColumnIndexList.add(i);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return numericColumnIndexList;
     }
 
     private int numericColumnCount(byte[] types) {
@@ -79,7 +103,7 @@ public class TableMapEventDataDeserializer implements EventDataDeserializer<Tabl
     private int[] readMetadata(ByteArrayInputStream inputStream, byte[] columnTypes) throws IOException {
         int[] metadata = new int[columnTypes.length];
         for (int i = 0; i < columnTypes.length; i++) {
-            switch(ColumnType.byCode(columnTypes[i] & 0xFF)) {
+            switch (ColumnType.byCode(columnTypes[i] & 0xFF)) {
                 case FLOAT:
                 case DOUBLE:
                 case BLOB:

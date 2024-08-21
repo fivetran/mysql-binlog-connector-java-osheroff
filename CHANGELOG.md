@@ -1,4 +1,26 @@
 # Changelog
+
+## [0.30.0](https://github.com/osheroff/mysql-binlog-connector-java/compare/0.30.0...0.29.2) - 2024-08-14
+
+- Add support for MySQL 8.4
+
+## [0.29.2](https://github.com/osheroff/mysql-binlog-connector-java/compare/0.29.2...0.29.1) - 2024-04-22
+
+- avoid SSL deadlocks using opt-in SO_LINGER with value of 0
+
+## [0.29.1] - 2024-03-24
+
+- bug fixes for VERY long transactions
+
+## [0.29.0](https://github.com/osheroff/mysql-binlog-connector-java/compare/0.29.0...0.28.3) - 2023-11-29
+
+- add support for mysql8 specific metadata
+
+## [0.28.3](https://github.com/osheroff/mysql-binlog-connector-java/compare/0.28.3...0.28.1) - 2023-10-19
+
+- around patch around pulling column signed-ness
+- make mariadb_slave_compat field configurable
+
 ## [0.28.1](https://github.com/osheroff/mysql-binlog-connector-java/compare/0.28.1...0.28.0) - 2023-07-07
 
 - Fix a signedness bug, see #108

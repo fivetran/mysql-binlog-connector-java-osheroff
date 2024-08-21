@@ -160,6 +160,19 @@ public class ByteArrayInputStream extends InputStream {
     }
 
     /**
+     * @see #readPackedNumber()
+     * @throws IOException in case of malformed number, eof, null
+     * @return long
+     */
+    public long readPackedLong() throws IOException {
+        Number number = readPackedNumber();
+        if (number == null) {
+            throw new IOException("Unexpected NULL where long should have been");
+        }
+        return number.longValue();
+    }
+
+    /**
      * Format (first-byte-based):<br>
      * 0-250 - The first byte is the number (in the range 0-250). No additional bytes are used.<br>
      * 251 - SQL NULL value<br>
