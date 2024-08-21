@@ -672,6 +672,10 @@ public class BinaryLogClient implements BinaryLogClientMXBean {
         logger.info("Database version: " + this.databaseVersion);
     }
 
+    protected BinaryLogDatabaseVersion getSourceDatabaseVersion() {
+        return this.databaseVersion;
+    }
+
     /**
      * Apply additional options for connection before requesting binlog stream.
      */
