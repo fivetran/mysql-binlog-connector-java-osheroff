@@ -26,6 +26,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocket;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.channels.Channel;
 
 /**
@@ -38,6 +39,7 @@ public class PacketChannel implements Channel {
     private Socket socket;
     private ByteArrayInputStream inputStream;
     private ByteArrayOutputStream outputStream;
+    private boolean shouldUseSoLinger0 = false;
 
     public PacketChannel(String hostname, int port) throws IOException {
         this(new Socket(hostname, port));
@@ -110,6 +112,10 @@ public class PacketChannel implements Channel {
         return isSSL;
     }
 
+    public void setShouldUseSoLinger0() {
+        shouldUseSoLinger0 = true;
+    }
+
     @Override
     public boolean isOpen() {
         return !socket.isClosed();
@@ -117,6 +123,13 @@ public class PacketChannel implements Channel {
 
     @Override
     public void close() throws IOException {
+        if (shouldUseSoLinger0) {
+            try {
+                socket.setSoLinger(true, 0);
+            } catch (SocketException e) {
+                // ignore
+            }
+        }
         try {
             socket.shutdownInput(); // for socketInputStream.setEOF(true)
         } catch (Exception e) {
@@ -128,5 +141,6 @@ public class PacketChannel implements Channel {
             // ignore
         }
         socket.close();
+        shouldUseSoLinger0 = false;
     }
 }

@@ -36,7 +36,9 @@ public class TableMapEventMetadataDeserializer {
 
     private final Logger logger = Logger.getLogger(getClass().getName());
 
-    public TableMapEventMetadata deserialize(ByteArrayInputStream inputStream, int nColumns, int nNumericColumns) throws IOException {
+    public TableMapEventMetadata deserialize(ByteArrayInputStream inputStream, int nColumns, byte[] columnTypes)
+        throws IOException {
+
         int remainingBytes = inputStream.available();
         if (remainingBytes <= 0) {
             return null;
@@ -71,7 +73,34 @@ public class TableMapEventMetadataDeserializer {
 
             switch (fieldType) {
                 case SIGNEDNESS:
-                    result.setSignedness(readBooleanList(inputStream, nNumericColumns));
+                    int numericColumns = 0;
+                    BitSet bitSet = new BitSet();
+                    for (int i = 0; i < columnTypes.length; i++) {
+                        switch (ColumnType.byCode(columnTypes[i] & 0xff)) {
+                            case TINY:
+                            case SHORT:
+                            case INT24:
+                            case LONG:
+                            case LONGLONG:
+                            case NEWDECIMAL:
+                            case FLOAT:
+                            case DOUBLE:
+                            case YEAR:
+                                numericColumns++;
+                                bitSet.set(i);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    BitSet signednessBitSet = readBooleanList(inputStream, numericColumns);
+                    BitSet finalBitSet = new BitSet();
+
+                    for ( int i = 0, j = 0; i < columnTypes.length; i++) {
+                        if ( bitSet.get(i) ) // if is numeric
+                            bitSet.set(i, signednessBitSet.get(j++)); // set signed-ness
+                    }
+                    result.setSignedness(bitSet);
                     break;
                 case DEFAULT_CHARSET:
                     result.setDefaultCharset(readDefaultCharset(inputStream));
@@ -114,6 +143,7 @@ public class TableMapEventMetadataDeserializer {
         }
         return result;
     }
+
 
     private static BitSet readBooleanList(ByteArrayInputStream inputStream, int length) throws IOException {
         BitSet result = new BitSet();
@@ -189,7 +219,8 @@ public class TableMapEventMetadataDeserializer {
         ENUM_AND_SET_DEFAULT_CHARSET(10),   // Charsets of ENUM and SET columns
         ENUM_AND_SET_COLUMN_CHARSET(11),    // Charsets of ENUM and SET columns
         VISIBILITY(12),                     // Column visibility (8.0.23 and newer)
-        UNKNOWN_METADATA_FIELD_TYPE(128);   // Returned with binlog-row-metadata=FULL from MySQL 8.0 in some cases
+        UNKNOWN_METADATA_FIELD_TYPE(
+            128);   // Returned with binlog-row-metadata=FULL from MySQL 8.0 in some cases
 
         private final int code;
 
@@ -197,7 +228,7 @@ public class TableMapEventMetadataDeserializer {
             this.code = code;
         }
 
-        public int getCode() { return code; }
+        public int getCode() {return code;}
 
         private static final Map<Integer, MetadataFieldType> INDEX_BY_CODE;
 

@@ -107,7 +107,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     @BeforeMethod
     public void beforeEachTest() throws Exception {
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("drop table if exists bikini_bottom");
                 statement.execute("create table bikini_bottom (name varchar(255) primary key)");
@@ -126,7 +125,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         client.registerEventListener(eventListener);
         try {
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("insert into bikini_bottom values('SpongeBob')");
                 }
@@ -137,7 +135,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             assertEquals(writtenRows.size(), 1);
             assertEquals(writtenRows.get(0), new Serializable[]{"SpongeBob".getBytes("UTF-8")});
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("update bikini_bottom set name = 'Patrick' where name = 'SpongeBob'");
                 }
@@ -149,7 +146,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             assertEquals(updatedRows.get(0).getKey(), new Serializable[]{"SpongeBob".getBytes("UTF-8")});
             assertEquals(updatedRows.get(0).getValue(), new Serializable[]{"Patrick".getBytes("UTF-8")});
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("delete from bikini_bottom where name = 'Patrick'");
                 }
@@ -237,7 +233,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         final boolean[] noZeroInDate = new boolean[1];
         master.query("select @@sql_mode;", new Callback<ResultSet>() {
 
-            @Override
             public void execute(ResultSet rs) throws SQLException {
                 // NO_ZERO_IN_DATE is turned on by default in MySQL 5.7
                 // https://github.com/shyiko/mysql-binlog-connector-java/pull/119#issuecomment-251870581
@@ -332,7 +327,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     public void testFSP() throws Exception {
         try {
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("create table fsp_check (column_ datetime(0))");
                 }
@@ -468,7 +462,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         client.registerEventListener(eventListener);
         try {
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("drop table if exists data_type_hell");
                     statement.execute("create table data_type_hell (column_ " + columnDefinition +
@@ -504,7 +497,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
 
             private int counter;
 
-            @Override
             public void onEvent(Event event) {
                 if (EventType.isRowMutation(event.getHeader().getEventType()) && counter++ == 1) {
                     // coordinates of second insert
@@ -516,7 +508,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         client.registerEventListener(markEventListener);
         try {
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("insert into bikini_bottom values('SpongeBob')");
                     statement.execute("insert into bikini_bottom values('Patrick')");
@@ -550,7 +541,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         client.registerLifecycleListener(lifecycleListenerMock);
         try {
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("create table geometry_table (location geometry)");
                     statement.execute(
@@ -562,7 +552,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             eventListener.waitFor(WriteRowsEventData.class, 0, DEFAULT_TIMEOUT);
             verify(lifecycleListenerMock, only()).onEventDeserializationFailure(eq(client), any(Exception.class));
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("insert into bikini_bottom values('SpongeBob')");
                 }
@@ -576,7 +565,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     @Test
     public void testTrackingOfLastKnownBinlogFilenameAndPosition() throws Exception {
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("insert into bikini_bottom values('SpongeBob')");
             }
@@ -585,13 +573,11 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         String binlogFilename = client.getBinlogFilename();
         long binlogPosition = client.getBinlogPosition();
         slave.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("flush logs");
             }
         });
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("insert into bikini_bottom values('Patrick')");
 
@@ -603,7 +589,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         assertNotEquals(updatedBinlogFilename, binlogFilename);
         assertNotEquals(updatedBinlogPosition, binlogPosition);
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("insert into bikini_bottom values('Rocky')");
             }
@@ -616,7 +601,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     @Test
     public void testAbilityToBeSuspendedAndResumed() throws Exception {
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("insert into bikini_bottom values('SpongeBob')");
             }
@@ -625,7 +609,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         try {
             client.disconnect();
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("insert into bikini_bottom values('Patrick')");
                     statement.execute("insert into bikini_bottom values('Rocky')");
@@ -648,7 +631,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         String binlogFilename = client.getBinlogFilename();
         long binlogPosition = client.getBinlogPosition();
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("insert into bikini_bottom values('SpongeBob')");
             }
@@ -685,7 +667,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
                     tcpReverseProxy.unbind();
                     TimeUnit.MILLISECONDS.sleep(300);
                     master.execute(new Callback<Statement>() {
-                        @Override
                         public void execute(Statement statement) throws SQLException {
                             statement.execute("insert into bikini_bottom values('SpongeBob')");
                         }
@@ -763,7 +744,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
                         mock(BinaryLogClient.LifecycleListener.class);
                 clientWithKeepAlive.registerLifecycleListener(lifecycleListenerMock);
                 master.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("drop table if exists not_meant_to_exist");
                     }
@@ -803,13 +783,11 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
                 binaryLogClient.connect(DEFAULT_TIMEOUT);
                 eventListener.waitFor(EventType.FORMAT_DESCRIPTION, 1, DEFAULT_TIMEOUT);
                 master.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("insert into bikini_bottom values('SpongeBob')");
                     }
                 });
                 slave.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("flush logs");
                     }
@@ -862,7 +840,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     private void bindInSeparateThread(final TCPReverseProxy tcpReverseProxy) throws InterruptedException {
         new Thread(new Runnable() {
 
-            @Override
             public void run() {
                 try {
                     tcpReverseProxy.bind();
@@ -883,7 +860,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     @Test
     public void testSpecifiedSchemaDoesNotResultInEventFiltering() throws Exception {
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute("drop database if exists mbcj_test_isolated");
                 statement.execute("create database mbcj_test_isolated");
@@ -899,7 +875,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             isolatedClient.registerEventListener(isolatedEventListener);
             isolatedClient.connect(DEFAULT_TIMEOUT);
             master.execute(new Callback<Statement>() {
-                @Override
                 public void execute(Statement statement) throws SQLException {
                     statement.execute("insert into mbcj_test_isolated.bikini_bottom values('Patrick')");
                     statement.execute("insert into mbcj_test.bikini_bottom values('Rocky')");
@@ -924,7 +899,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             final AtomicBoolean breakOutputStream = new AtomicBoolean();
             binaryLogClient.setSocketFactory(new SocketFactory() {
 
-                @Override
                 public Socket createSocket() throws SocketException {
                     return new Socket() {
 
@@ -965,7 +939,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             try {
                 eventListener.waitFor(EventType.FORMAT_DESCRIPTION, 1, DEFAULT_TIMEOUT);
                 master.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("insert into bikini_bottom values('SpongeBob')");
                     }
@@ -975,7 +948,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
                 inputStreamLock.lock();
                 // fill input stream buffer
                 master.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("insert into bikini_bottom values('Patrick')");
                         statement.execute("insert into bikini_bottom values('Rocky')");
@@ -996,7 +968,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
                 // unlock input stream (from previous connection)
                 inputStreamLock.unlock();
                 master.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("delete from bikini_bottom where name = 'Patrick'");
                     }
@@ -1080,7 +1051,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
     @Test
     public void testSetMasterServerId() throws Exception {
         slave.query("SELECT @@server_id", new Callback<ResultSet>() {
-            @Override
             public void execute(final ResultSet rs) throws SQLException {
                 rs.next();
                 assertEquals(client.getMasterServerId(), rs.getLong("@@server_id"));
@@ -1108,7 +1078,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final String markerQuery = "drop table if exists _EOS_marker";
         BinaryLogClient.EventListener markerInterceptor = new BinaryLogClient.EventListener() {
-            @Override
             public void onEvent(Event event) {
                 if (event.getHeader().getEventType() == EventType.QUERY) {
                     EventData data = event.getData();
@@ -1120,7 +1089,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
         };
         client.registerEventListener(markerInterceptor);
         master.execute(new Callback<Statement>() {
-            @Override
             public void execute(Statement statement) throws SQLException {
                 statement.execute(markerQuery);
             }
@@ -1143,7 +1111,6 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
             }
             if (master != null) {
                 master.execute(new Callback<Statement>() {
-                    @Override
                     public void execute(Statement statement) throws SQLException {
                         statement.execute("drop database mbcj_test");
                     }
