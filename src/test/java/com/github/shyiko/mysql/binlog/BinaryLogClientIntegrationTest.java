@@ -249,8 +249,10 @@ public class BinaryLogClientIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     public void testDeserializationOfTIME() throws Exception {
-        assertEquals(writeAndCaptureRow("time", "'1:2:3.000000'"), new Serializable[]{
-            generateTime(1970, 1, 1, 1, 2, 3, 0)});
+        assertEquals(writeAndCaptureRow("time", "'-00:00:01'"), new Serializable[]{
+          generateTime(1969, 12, 31, 23, 59, 59, 0)});
+        assertEquals(writeAndCaptureRow("time", "'-00:00:01'"), new Serializable[]{
+          generateTime(1969, 12, 31, 23, 59, 59, 0)});
     }
 
     @Test

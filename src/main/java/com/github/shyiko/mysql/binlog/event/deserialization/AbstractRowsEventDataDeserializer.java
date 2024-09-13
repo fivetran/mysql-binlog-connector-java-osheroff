@@ -22,7 +22,9 @@ import com.github.shyiko.mysql.binlog.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.sql.Time;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Map;
@@ -69,6 +71,9 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
 
     private static final int DIG_PER_DEC = 9;
     private static final int[] DIG_TO_BYTES = {0, 1, 1, 2, 2, 3, 3, 4, 4, 4};
+    public static final long SECOND_IN_MILLIS = 1000;
+    public static final long MINUTE_IN_MILLIS = SECOND_IN_MILLIS * 60;
+    public static final long HOUR_IN_MILLIS = MINUTE_IN_MILLIS * 60;
 
     private final Map<Long, TableMapEventData> tableMapEventByTableId;
 
@@ -304,13 +309,19 @@ public abstract class AbstractRowsEventDataDeserializer<T extends EventData> imp
             + fractional-seconds storage (size depends on meta)
         */
         long time = bigEndianLong(inputStream.read(3), 0, 3);
+
         int fsp = deserializeFractionalSeconds(meta, inputStream);
-        Long timestamp = asUnixTime(1970, 1, 1,
-            bitSlice(time, 2, 10, 24),
-            bitSlice(time, 12, 6, 24),
-            bitSlice(time, 18, 6, 24),
-            fsp / 1000
-        );
+        int signBit= bitSlice(time, 0, 1, 24);
+        int sign = 1;
+        if (signBit == 0) {
+            sign = -1;
+            time = ~time + 1;
+        }
+        int hour = bitSlice(time, 2, 10, 24);
+        int minute = bitSlice(time, 12, 6, 24);
+        int second = bitSlice(time, 18, 6, 24);
+
+        Long timestamp = java.time.Instant.ofEpochMilli(sign * (hour * HOUR_IN_MILLIS + minute * MINUTE_IN_MILLIS + second * SECOND_IN_MILLIS)).toEpochMilli();
         if (deserializeDateAndTimeAsLong) {
             return castTimestamp(timestamp, fsp);
         }
