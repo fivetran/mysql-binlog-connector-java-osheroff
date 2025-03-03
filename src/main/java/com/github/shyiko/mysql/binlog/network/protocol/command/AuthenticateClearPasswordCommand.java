@@ -5,7 +5,7 @@ import com.github.shyiko.mysql.binlog.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class AuthenticateClearPasswordCommand implements  Command {
-    private String password;
+    private final String password;
 
     public AuthenticateClearPasswordCommand(String password) {
         this.password = password;
@@ -13,8 +13,9 @@ public class AuthenticateClearPasswordCommand implements  Command {
 
     @Override
     public byte[] toByteArray() throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        buffer.writeZeroTerminatedString(password);
-        return buffer.toByteArray();
+        try(ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+            buffer.writeZeroTerminatedString(password);
+            return buffer.toByteArray();
+        }
     }
 }
