@@ -5,7 +5,13 @@ import com.github.shyiko.mysql.binlog.io.ByteArrayOutputStream;
 import com.github.shyiko.mysql.binlog.network.protocol.ErrorPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.PacketChannel;
-import com.github.shyiko.mysql.binlog.network.protocol.command.*;
+import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateClearPasswordCommand;
+import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateNativePasswordCommand;
+import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSHA2Command;
+import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSHA2RSAPasswordCommand;
+import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSecurityPasswordCommand;
+import com.github.shyiko.mysql.binlog.network.protocol.command.ByteArrayCommand;
+import com.github.shyiko.mysql.binlog.network.protocol.command.Command;
 
 import java.io.IOException;
 import java.util.Arrays;
