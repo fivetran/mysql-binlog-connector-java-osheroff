@@ -5,13 +5,13 @@ import com.github.shyiko.mysql.binlog.io.ByteArrayOutputStream;
 import com.github.shyiko.mysql.binlog.network.protocol.ErrorPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.GreetingPacket;
 import com.github.shyiko.mysql.binlog.network.protocol.PacketChannel;
+import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateClearPasswordCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateNativePasswordCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSHA2Command;
 import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSHA2RSAPasswordCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.AuthenticateSecurityPasswordCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.ByteArrayCommand;
 import com.github.shyiko.mysql.binlog.network.protocol.command.Command;
-import com.github.shyiko.mysql.binlog.network.protocol.command.SSLRequestCommand;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -21,7 +21,8 @@ import java.util.logging.Logger;
 public class Authenticator {
     private enum AuthMethod {
         NATIVE,
-        CACHING_SHA2
+        CACHING_SHA2,
+        CLEAR_PASSWORD
     };
 
     private final GreetingPacket greetingPacket;
@@ -35,6 +36,7 @@ public class Authenticator {
 
     private final String SHA2_PASSWORD = "caching_sha2_password";
     private final String MYSQL_NATIVE = "mysql_native_password";
+    private final String MYSQL_CLEAR_PASSWORD = "mysql_clear_password";
 
     private AuthMethod authMethod = AuthMethod.NATIVE;
 
@@ -61,6 +63,9 @@ public class Authenticator {
         if ( SHA2_PASSWORD.equals(greetingPacket.getPluginProvidedData()) ) {
             authMethod = AuthMethod.CACHING_SHA2;
             authenticateCommand = new AuthenticateSHA2Command(schema, username, password, scramble, collation);
+        } else if (MYSQL_CLEAR_PASSWORD.equals(greetingPacket.getPluginProvidedData())) {
+            authMethod = AuthMethod.CLEAR_PASSWORD;
+            authenticateCommand = new AuthenticateClearPasswordCommand(password);
         } else {
             authMethod = AuthMethod.NATIVE;
             authenticateCommand = new AuthenticateSecurityPasswordCommand(schema, username, password, scramble, collation);
@@ -170,6 +175,11 @@ public class Authenticator {
             this.scramble = buffer.readZeroTerminatedString();
             Command authCommand = new AuthenticateSHA2Command(scramble, password);
             channel.write(authCommand);
+        } else if (MYSQL_CLEAR_PASSWORD.equals(authName)) {
+            authMethod = AuthMethod.CLEAR_PASSWORD;
+
+            Command swithCommand = new AuthenticateClearPasswordCommand(password);
+            channel.write(swithCommand);
         } else {
             throw new AuthenticationException("unsupported authentication method: " + authName);
         }
