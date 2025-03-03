@@ -169,7 +169,7 @@ public class Authenticator {
             this.scramble = buffer.readZeroTerminatedString();
             Command authCommand = new AuthenticateSHA2Command(scramble, password);
             channel.write(authCommand);
-        } else if (MYSQL_CLEAR_PASSWORD.equals(greetingPacket.getPluginProvidedData())) {
+        } else if (MYSQL_CLEAR_PASSWORD.equals(authName)) {
             authMethod = AuthMethod.CLEAR_PASSWORD;
 
             Command swithCommand = new AuthenticateClearPasswordCommand(password);
